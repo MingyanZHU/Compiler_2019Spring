@@ -1,26 +1,20 @@
 package lexer;
 
 public class Token {
-    private final String origin;
-    private final String value;
-    private final Tag key;
+    // 用于处理关键字和各种运算符
+    private final Tag tag;
 
-    public Token(String origin, Tag key, String value) {
-        this.origin = origin;
-        this.value = value;
-        this.key = key;
+    public Token(Tag tag) {
+        this.tag = tag;
     }
 
-    public String getValue() {
-        return value;
-    }
 
-    public Tag getKey() {
-        return key;
+    public Tag getTag() {
+        return tag;
     }
 
     @Override
     public String toString() {
-        return origin + "\t<" + key + ", " + value + ">";
+        return "<" + tag + ">";
     }
 }

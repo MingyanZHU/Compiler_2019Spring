@@ -6,6 +6,8 @@ while(num != 0){
     string = "Hello world!
     ";
     int _aInt = 100;
+    a[10] = 100;
+    bool b = false;
     int 123Bcd;
     我
 }

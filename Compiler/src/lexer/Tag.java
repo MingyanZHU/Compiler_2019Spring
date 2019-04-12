@@ -1,27 +1,29 @@
 package lexer;
 
 public enum Tag {
-    INT("int"), FLOAT("float"), BOOL("bool"), STRUCT("struct"), IF("if"),
-    ELSE("else"), DO("do"), WHILE("while"), // keyword
-    PLUSOP("+"), MINUSOP("-"), MULOP("*"), DEVOP("/"), MODOP("%"), // arithmetic op
-    NE("!="), G(">"), GE(">="), L("<"), LE("<="), EQUAL("=="), // logical op
-    SLP("("), SRP(")"), LP("{"), RP("}"), MLP("["), MRP("]"), ASSIGN("="),  SEMICOLON(";"), // delimiters
-    REAL("REAL"), // number
+    INT("int"), FLOAT("float"), BOOL("bool"), CHAR("char"), STRUCT("struct"), IF("if"),
+    ELSE("else"), DO("do"), WHILE("while"), BREAK("break"), CONTINUE("continue"), TRUE("true"), FALSE("false"), // keyword
+    ADD("+"), SUB("-"), MUL("*"), DIV("/"), MOD("%"), // arithmetic op
+    NE("!="), G(">"), GE(">="), L("<"), LE("<="), EQ("=="), // logical op
+    SLP("("), SRP(")"), LP("{"), RP("}"), MLP("["), MRP("]"), ASSIGN("="), SEMICOLON(";"), // delimiters
+    REAL("REAL"), // float number
+    NUM("NUM"), // integer number
     ID("ID"),  // identifier
     STRING("STRING"),
     NULL("null");
 
     private String value;
-    Tag(String tag){
+
+    Tag(String tag) {
         this.value = tag;
     }
 
-    public String getValue(){
+    public String getValue() {
         return this.value;
     }
 
-    public static Tag fromString(String tag){
-        for(Tag t : Tag.values()){
+    public static Tag fromString(String tag) {
+        for (Tag t : Tag.values()) {
             if (t.value.equals(tag))
                 return t;
         }

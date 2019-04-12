@@ -1,5 +1,8 @@
 package lexer;
 
+import symbols.SymbolBoard;
+import symbols.SymbolItem;
+
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -12,7 +15,7 @@ public class Lexer {
     private final Queue<Character> buffer = new LinkedList<>();
     private final List<Token> lex = new ArrayList<>();
     private BufferedReader bufferedReader;
-    private static final Set<String> keywords = new HashSet<>(Arrays.asList("int", "double", "bool", "if", "else", "while", "do"));
+    private static final Set<String> keywords = new HashSet<>(Arrays.asList("int", "double", "bool", "char", "struct", "if", "else", "while", "do", "break", "continue", "true", "false"));
     private static final Set<Character> skipSymbol = new HashSet<>(Arrays.asList(' ', '\t', '\n'));
     private static final Set<Character> delimiters = new HashSet<>(Arrays.asList('=', ';', '[', ']', '{', '}', '(', ')'));
     private static final Set<Character> ambiguousSymbol = new HashSet<>(Arrays.asList('!', '&', '|', '>', '<', '/', '='));
@@ -20,10 +23,11 @@ public class Lexer {
     private static final Set<String> logicalOp = new HashSet<>(Arrays.asList("&", "|", "||", "&&", "^", "!"));
     private static final Set<Character> arithmeticOp = new HashSet<>(Arrays.asList('+', '-', '*', '/', '%'));
 
-    // TODO 布尔型变量 符号表的处理 增加错误处理
+    private final SymbolBoard symbolBoard;  // TODO 本质上没有任何效果 所填符号表在语法和语义分析时需重写
 
     public Lexer(String path) {
         this.path = path;
+        this.symbolBoard = new SymbolBoard(null);
         try {
             this.bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(path)));
         } catch (IOException e) {
@@ -58,9 +62,11 @@ public class Lexer {
         }
         String ans = builder.toString();
         if (keywords.contains(ans))
-            return new Token(ans, Tag.valueOf(ans.toUpperCase()), "");
-        else
-            return new Token(ans, Tag.ID, ans);
+            return new Token(Tag.valueOf(ans.toUpperCase()));
+        else{
+            symbolBoard.putSymbolItem(ans, new SymbolItem(ans, Tag.ID, lines, -1));
+            return new Word(Tag.ID, ans);
+        }
     }
 
     private Token reconNumber(char c) throws LexerException {
@@ -153,9 +159,9 @@ public class Lexer {
             e.printStackTrace();
         }
         if (state == 10)
-            return new Token(stringBuilder.toString(), Tag.INT, stringBuilder.toString());
+            return new Num(Tag.NUM, Integer.valueOf(stringBuilder.toString()));
         else
-            return new Token(stringBuilder.toString(), Tag.FLOAT, stringBuilder.toString());
+            return new Real(Tag.REAL, Double.valueOf(stringBuilder.toString()));
     }
 
     private void reconComment(String start) {
@@ -221,7 +227,7 @@ public class Lexer {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return new Token(stringBuilder.toString(), Tag.STRING, stringBuilder.toString());
+        return new Word(Tag.STRING, stringBuilder.toString());
     }
 
     private void panicMode() {
@@ -268,23 +274,23 @@ public class Lexer {
                         char c2 = !buffer.isEmpty() ? buffer.poll() : (char) bufferedReader.read();
                         String temp = String.valueOf(new char[]{c, c2});
                         if (relationOp.contains(temp) || logicalOp.contains(temp)) {
-                            token = new Token(temp, Tag.fromString(temp), "");
+                            token = new Token(Tag.fromString(temp));
 //                            System.out.println(token);
                             lex.add(token);
                         } else if (temp.equals("/*")) {
                             reconComment(temp);
                         } else {
-                            token = new Token(String.valueOf(c), Tag.fromString(String.valueOf(c)), "");
+                            token = new Token(Tag.fromString(String.valueOf(c)));
 //                            System.out.println(token);
                             lex.add(token);
                             buffer.add(c2);
                         }
                     } else if (arithmeticOp.contains(c)) {
-                        token = new Token(String.valueOf(c), Tag.fromString(String.valueOf(c)), "");
+                        token = new Token(Tag.fromString(String.valueOf(c)));
 //                        System.out.println(token);
                         lex.add(token);
                     } else if (delimiters.contains(c)) {
-                        token = new Token(String.valueOf(c), Tag.fromString(String.valueOf(c)), "");
+                        token = new Token(Tag.fromString(String.valueOf(c)));
 //                        System.out.println(token);
                         lex.add(token);
                     } else {
@@ -299,8 +305,11 @@ public class Lexer {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        System.out.println("//////Token序列//////");
         for (Token token : lex)
             System.out.println(token);
+        System.out.println("//////符号表//////");
+        System.out.println(symbolBoard);
     }
 
     public static void main(String[] args) {
