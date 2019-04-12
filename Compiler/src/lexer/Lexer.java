@@ -8,6 +8,7 @@ import java.util.*;
 
 public class Lexer {
     private final String path;
+    private int lines = 1;
     private final Queue<Character> buffer = new LinkedList<>();
     private final List<Token> lex = new ArrayList<>();
     private BufferedReader bufferedReader;
@@ -63,85 +64,98 @@ public class Lexer {
     }
 
     private Token reconNumber(char c) throws LexerException {
-        // TODO 区分Integer和Float类型的正数
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(c);
         int x;
-        int state = 2;
+        int state = c == '.' ? 12 : 3;
         try {
             while ((x = bufferedReader.read()) != -1) {
                 char cc = (char) x;
                 switch (state) {
-                    case 2:
-                        if (isDigit(cc)) {
-                            state = 4;
-                            stringBuilder.append(cc);
-                        } else if (cc == '.') {
-                            state = 3;
-                            stringBuilder.append(cc);
-                        } else {
-                            state = 8;
-                            buffer.add(cc);
-                        }
-                        break;
                     case 3:
                         if (isDigit(cc)) {
+                            stringBuilder.append(cc);
+                            state = 3;
+                        } else if (cc == '.') {
                             state = 4;
                             stringBuilder.append(cc);
+                        } else if (cc == 'E' || cc == 'e') {
+                            state = 6;
+                            stringBuilder.append(cc);
                         } else {
-                            throw new LexerException(stringBuilder.toString() + "数字格式错误");
+                            state = 10;
+                            buffer.add(cc);
                         }
                         break;
                     case 4:
                         if (isDigit(cc)) {
-                            state = 4;
-                            stringBuilder.append(cc);
-                        } else if (cc == 'E' || cc == 'e') {
                             state = 5;
                             stringBuilder.append(cc);
                         } else {
-                            state = 8;
+                            state = 11;
                             buffer.add(cc);
                         }
                         break;
                     case 5:
                         if (isDigit(cc)) {
-                            state = 7;
+                            // not change state
                             stringBuilder.append(cc);
-                        } else if (cc == '+' || cc == '-') {
+                        } else if (cc == 'e' || cc == 'E') {
                             state = 6;
                             stringBuilder.append(cc);
                         } else {
-                            throw new LexerException(stringBuilder.toString() + " 数字格式错误");
+                            state = 11;
+                            buffer.add(cc);
                         }
                         break;
                     case 6:
-                        if (isDigit(cc)) {
+                        if (cc == '+' || cc == '-') {
                             state = 7;
                             stringBuilder.append(cc);
+                        } else if (isDigit(cc)) {
+                            state = 8;
+                            stringBuilder.append(cc);
                         } else {
-                            throw new LexerException(stringBuilder.toString() + " 数字格式错误");
+                            throw new LexerException(stringBuilder.toString() + "数字格式错误");
                         }
                         break;
                     case 7:
                         if (isDigit(cc)) {
-                            state = 7;
+                            state = 8;
                             stringBuilder.append(cc);
                         } else {
-                            state = 8;
-                            buffer.add(cc);
+                            throw new LexerException(stringBuilder.toString() + "数字格式错误");
                         }
                         break;
                     case 8:
+                        if (isDigit(cc)) {
+                            // not change state
+                            stringBuilder.append(cc);
+                        } else {
+                            state = 9;
+                            buffer.add(cc);
+                        }
                         break;
+                    case 12:
+                        if (isDigit(cc)) {
+                            state = 5;
+                            stringBuilder.append(cc);
+                        } else {
+                            throw new LexerException(stringBuilder.toString() + "数字格式错误");
+                        }
+                        break;
+
                 }
-                if (state == 8)
+                if (state == 9 || state == 10 || state == 11)
                     break;
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return new Token(stringBuilder.toString(), Tag.REAL, stringBuilder.toString());
+        if (state == 10)
+            return new Token(stringBuilder.toString(), Tag.INT, stringBuilder.toString());
+        else
+            return new Token(stringBuilder.toString(), Tag.FLOAT, stringBuilder.toString());
     }
 
     private void reconComment(String start) {
@@ -152,6 +166,8 @@ public class Lexer {
         try {
             while ((x = bufferedReader.read()) != -1) {
                 char c = (char) x;
+                if (c == '\n')
+                    lines++;
                 switch (state) {
                     case 2:
                         if (c == '*') {
@@ -186,7 +202,7 @@ public class Lexer {
 //        System.out.println("///////////////////////////\n" + stringBuilder.toString() + "\n//////////////////////////");
     }
 
-    private Token reconString(char c) {
+    private Token reconString(char c) throws LexerException {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(c);
 
@@ -194,6 +210,9 @@ public class Lexer {
         try {
             while ((x = bufferedReader.read()) != -1) {
                 char cc = (char) x;
+                if (cc == '\n') {
+                    throw new LexerException(stringBuilder.toString() + "\\n" + "字符串格式错误");
+                }
                 stringBuilder.append(cc);
                 if (cc == '"') {
                     break;
@@ -205,57 +224,83 @@ public class Lexer {
         return new Token(stringBuilder.toString(), Tag.STRING, stringBuilder.toString());
     }
 
-    public void scan() {
+    private void panicMode() {
+        int x = -2;
         try {
-            int x = -2;
-            Token token;
             while (!buffer.isEmpty() || (x = bufferedReader.read()) != -1) {
                 char c = !buffer.isEmpty() ? buffer.poll() : (char) x;
-                if (skipSymbol.contains(c)) {
-                } else if (isLetter(c) || x == '_') {
-                    token = reconID(c);
-                    System.out.println(token);
-                    lex.add(token);
-                } else if (isDigit(c)) {
-                    token = reconNumber(c);
-                    System.out.println(token);
-                    lex.add(token);
-                } else if (c == '"') {
-                    token = reconString(c);
-                    System.out.println(token);
-                    lex.add(token);
-                } else if (ambiguousSymbol.contains(c)) {
-                    char c2 = !buffer.isEmpty() ? buffer.poll() : (char) bufferedReader.read();
-                    String temp = String.valueOf(new char[]{c, c2});
-                    if (relationOp.contains(temp) || logicalOp.contains(temp)) {
-                        token = new Token(temp, Tag.fromString(temp), "");
-                        System.out.println(token);
-                        lex.add(token);
-                    } else if (temp.equals("/*")) {
-                        reconComment(temp);
-                    } else {
-                        token = new Token(String.valueOf(c), Tag.fromString(String.valueOf(c)), "");
-                        System.out.println(token);
-                        lex.add(token);
-                        buffer.add(c2);
-                    }
-                } else if (arithmeticOp.contains(c)) {
-                    token = new Token(String.valueOf(c), Tag.fromString(String.valueOf(c)), "");
-                    System.out.println(token);
-                    lex.add(token);
+                if (c == '\n') {
+                    lines++;
+                    break;
                 } else if (delimiters.contains(c)) {
-                    token = new Token(String.valueOf(c), Tag.fromString(String.valueOf(c)), "");
-                    System.out.println(token);
-                    lex.add(token);
-                } else {
-                    System.out.println(c);
+                    break;
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
-        } catch (LexerException e) {
-            System.out.println("[ERROR] " + e.getMessage());
         }
+    }
+
+    public void scan() {
+        try {
+            int x = -2;
+            Token token;
+
+            while (!buffer.isEmpty() || (x = bufferedReader.read()) != -1) {
+                try {
+                    char c = !buffer.isEmpty() ? buffer.poll() : (char) x;
+                    if (skipSymbol.contains(c)) {
+                        if (c == '\n')
+                            lines++;
+                    } else if (isLetter(c) || x == '_') {
+                        token = reconID(c);
+//                        System.out.println(token);
+                        lex.add(token);
+                    } else if (isDigit(c) || c == '.') {
+                        token = reconNumber(c);
+//                        System.out.println(token);
+                        lex.add(token);
+                    } else if (c == '"') {
+                        token = reconString(c);
+//                        System.out.println(token);
+                        lex.add(token);
+                    } else if (ambiguousSymbol.contains(c)) {
+                        char c2 = !buffer.isEmpty() ? buffer.poll() : (char) bufferedReader.read();
+                        String temp = String.valueOf(new char[]{c, c2});
+                        if (relationOp.contains(temp) || logicalOp.contains(temp)) {
+                            token = new Token(temp, Tag.fromString(temp), "");
+//                            System.out.println(token);
+                            lex.add(token);
+                        } else if (temp.equals("/*")) {
+                            reconComment(temp);
+                        } else {
+                            token = new Token(String.valueOf(c), Tag.fromString(String.valueOf(c)), "");
+//                            System.out.println(token);
+                            lex.add(token);
+                            buffer.add(c2);
+                        }
+                    } else if (arithmeticOp.contains(c)) {
+                        token = new Token(String.valueOf(c), Tag.fromString(String.valueOf(c)), "");
+//                        System.out.println(token);
+                        lex.add(token);
+                    } else if (delimiters.contains(c)) {
+                        token = new Token(String.valueOf(c), Tag.fromString(String.valueOf(c)), "");
+//                        System.out.println(token);
+                        lex.add(token);
+                    } else {
+//                        System.out.println(c);
+                        throw new LexerException("\"" + c + "\"为未定义的字符");
+                    }
+                } catch (LexerException e) {
+                    System.out.println("[ERROR " + lines + "]" + e.getMessage());
+                    panicMode();
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        for (Token token : lex)
+            System.out.println(token);
     }
 
     public static void main(String[] args) {
