@@ -14,12 +14,12 @@ public class Lexer {
     private static final Set<String> keywords = new HashSet<>(Arrays.asList("int", "double", "bool", "if", "else", "while", "do"));
     private static final Set<Character> skipSymbol = new HashSet<>(Arrays.asList(' ', '\t', '\n'));
     private static final Set<Character> delimiters = new HashSet<>(Arrays.asList('=', ';', '[', ']', '{', '}', '(', ')'));
-    private static final Set<Character> ambiguousSymbol = new HashSet<>(Arrays.asList('!', '&', '|', '>', '<'));
-    private static final Set<String> relationOp = new HashSet<>(Arrays.asList("!=", ">", ">=", "<", "<="));
+    private static final Set<Character> ambiguousSymbol = new HashSet<>(Arrays.asList('!', '&', '|', '>', '<', '/', '='));
+    private static final Set<String> relationOp = new HashSet<>(Arrays.asList("!=", ">", ">=", "<", "<=", "=="));
     private static final Set<String> logicalOp = new HashSet<>(Arrays.asList("&", "|", "||", "&&", "^", "!"));
     private static final Set<Character> arithmeticOp = new HashSet<>(Arrays.asList('+', '-', '*', '/', '%'));
 
-    // TODO 布尔型变量 符号表的处理
+    // TODO 布尔型变量 符号表的处理 增加错误处理
 
     public Lexer(String path) {
         this.path = path;
@@ -63,9 +63,10 @@ public class Lexer {
     }
 
     private Token reconNumber(char c) throws LexerException {
+        // TODO 区分Integer和Float类型的正数
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(c);
-        int x = -2;
+        int x;
         int state = 2;
         try {
             while ((x = bufferedReader.read()) != -1) {
@@ -80,6 +81,7 @@ public class Lexer {
                             stringBuilder.append(cc);
                         } else {
                             state = 8;
+                            buffer.add(cc);
                         }
                         break;
                     case 3:
@@ -99,6 +101,7 @@ public class Lexer {
                             stringBuilder.append(cc);
                         } else {
                             state = 8;
+                            buffer.add(cc);
                         }
                         break;
                     case 5:
@@ -126,6 +129,7 @@ public class Lexer {
                             stringBuilder.append(cc);
                         } else {
                             state = 8;
+                            buffer.add(cc);
                         }
                         break;
                     case 8:
@@ -138,8 +142,67 @@ public class Lexer {
             e.printStackTrace();
         }
         return new Token(stringBuilder.toString(), Tag.REAL, stringBuilder.toString());
-//        System.out.println("<" + Tag.REAL + ", " + stringBuilder.toString() + ">");
-//        return x;
+    }
+
+    private void reconComment(String start) {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(start);
+        int state = 2;
+        int x;
+        try {
+            while ((x = bufferedReader.read()) != -1) {
+                char c = (char) x;
+                switch (state) {
+                    case 2:
+                        if (c == '*') {
+                            state = 3;
+                            stringBuilder.append(c);
+                        } else {
+                            state = 2;
+                            stringBuilder.append(c);
+                        }
+                        break;
+                    case 3:
+                        if (c == '*') {
+                            state = 3;
+                            stringBuilder.append(c);
+                        } else if (c == '/') {
+                            state = 4;
+                            stringBuilder.append(c);
+                        } else {
+                            state = 2;
+                            stringBuilder.append(c);
+                        }
+                        break;
+                    case 4:
+                        break;
+                }
+                if (state == 4)
+                    break;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+//        System.out.println("///////////////////////////\n" + stringBuilder.toString() + "\n//////////////////////////");
+    }
+
+    private Token reconString(char c) {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(c);
+
+        int x;
+        try {
+            while ((x = bufferedReader.read()) != -1) {
+                char cc = (char) x;
+                stringBuilder.append(cc);
+                if (cc == '"') {
+                    break;
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return new Token(stringBuilder.toString(), Tag.STRING, stringBuilder.toString());
     }
 
     public void scan() {
@@ -157,8 +220,8 @@ public class Lexer {
                     token = reconNumber(c);
                     System.out.println(token);
                     lex.add(token);
-                } else if (arithmeticOp.contains(c)) {
-                    token = new Token(String.valueOf(c), Tag.fromString(String.valueOf(c)), "");
+                } else if (c == '"') {
+                    token = reconString(c);
                     System.out.println(token);
                     lex.add(token);
                 } else if (ambiguousSymbol.contains(c)) {
@@ -166,10 +229,18 @@ public class Lexer {
                     String temp = String.valueOf(new char[]{c, c2});
                     if (relationOp.contains(temp) || logicalOp.contains(temp)) {
                         token = new Token(temp, Tag.fromString(temp), "");
+                        System.out.println(token);
+                        lex.add(token);
+                    } else if (temp.equals("/*")) {
+                        reconComment(temp);
                     } else {
                         token = new Token(String.valueOf(c), Tag.fromString(String.valueOf(c)), "");
+                        System.out.println(token);
+                        lex.add(token);
                         buffer.add(c2);
                     }
+                } else if (arithmeticOp.contains(c)) {
+                    token = new Token(String.valueOf(c), Tag.fromString(String.valueOf(c)), "");
                     System.out.println(token);
                     lex.add(token);
                 } else if (delimiters.contains(c)) {

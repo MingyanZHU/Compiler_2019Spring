@@ -4,10 +4,11 @@ public enum Tag {
     INT("int"), FLOAT("float"), BOOL("bool"), STRUCT("struct"), IF("if"),
     ELSE("else"), DO("do"), WHILE("while"), // keyword
     PLUSOP("+"), MINUSOP("-"), MULOP("*"), DEVOP("/"), MODOP("%"), // arithmetic op
-    NE("!="), G(">"), GE(">="), L("<"), LE("<="), // logical op
-    SLP("("), SRP(")"), LP("{"), RP("}"), MLP("["), MRP("]"), EQUAL("="),// delimiters
+    NE("!="), G(">"), GE(">="), L("<"), LE("<="), EQUAL("=="), // logical op
+    SLP("("), SRP(")"), LP("{"), RP("}"), MLP("["), MRP("]"), ASSIGN("="),  SEMICOLON(";"), // delimiters
     REAL("REAL"), // number
     ID("ID"),  // identifier
+    STRING("STRING"),
     NULL("null");
 
     private String value;
