@@ -13,7 +13,8 @@ public class Lexer {
     private final String path;
     private int lines = 1;
     private final Queue<Character> buffer = new LinkedList<>();
-    private final List<Token> lex = new ArrayList<>();
+    private final List<Token> tokens = new ArrayList<>();
+    private final List<String> errors = new ArrayList<>();
     private BufferedReader bufferedReader;
     private static final Set<String> keywords = new HashSet<>(Arrays.asList("int", "double", "bool", "char", "struct", "if", "else", "while", "do", "break", "continue", "true", "false"));
     private static final Set<Character> skipSymbol = new HashSet<>(Arrays.asList(' ', '\t', '\n'));
@@ -63,7 +64,7 @@ public class Lexer {
         String ans = builder.toString();
         if (keywords.contains(ans))
             return new Token(Tag.valueOf(ans.toUpperCase()));
-        else{
+        else {
             symbolBoard.putSymbolItem(ans, new SymbolItem(ans, Tag.ID, lines, -1));
             return new Word(Tag.ID, ans);
         }
@@ -239,6 +240,7 @@ public class Lexer {
                     lines++;
                     break;
                 } else if (delimiters.contains(c)) {
+                    buffer.add(c);
                     break;
                 }
             }
@@ -261,55 +263,72 @@ public class Lexer {
                     } else if (isLetter(c) || x == '_') {
                         token = reconID(c);
 //                        System.out.println(token);
-                        lex.add(token);
+                        tokens.add(token);
                     } else if (isDigit(c) || c == '.') {
                         token = reconNumber(c);
 //                        System.out.println(token);
-                        lex.add(token);
+                        tokens.add(token);
                     } else if (c == '"') {
                         token = reconString(c);
 //                        System.out.println(token);
-                        lex.add(token);
+                        tokens.add(token);
                     } else if (ambiguousSymbol.contains(c)) {
                         char c2 = !buffer.isEmpty() ? buffer.poll() : (char) bufferedReader.read();
                         String temp = String.valueOf(new char[]{c, c2});
                         if (relationOp.contains(temp) || logicalOp.contains(temp)) {
                             token = new Token(Tag.fromString(temp));
 //                            System.out.println(token);
-                            lex.add(token);
+                            tokens.add(token);
                         } else if (temp.equals("/*")) {
                             reconComment(temp);
                         } else {
                             token = new Token(Tag.fromString(String.valueOf(c)));
 //                            System.out.println(token);
-                            lex.add(token);
+                            tokens.add(token);
                             buffer.add(c2);
                         }
                     } else if (arithmeticOp.contains(c)) {
                         token = new Token(Tag.fromString(String.valueOf(c)));
 //                        System.out.println(token);
-                        lex.add(token);
+                        tokens.add(token);
                     } else if (delimiters.contains(c)) {
                         token = new Token(Tag.fromString(String.valueOf(c)));
 //                        System.out.println(token);
-                        lex.add(token);
+                        tokens.add(token);
                     } else {
 //                        System.out.println(c);
                         throw new LexerException("\"" + c + "\"为未定义的字符");
                     }
                 } catch (LexerException e) {
-                    System.out.println("[ERROR " + lines + "]" + e.getMessage());
+                    String errorMessage = "[ERROR " + lines + "]" + e.getMessage();
+                    System.err.println(errorMessage);
+                    errors.add(errorMessage);
                     panicMode();
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
-        System.out.println("//////Token序列//////");
-        for (Token token : lex)
-            System.out.println(token);
-        System.out.println("//////符号表//////");
-        System.out.println(symbolBoard);
+//        System.out.println("//////Token序列//////");
+//        for (Token token : tokens)
+//            System.out.println(token);
+//        System.out.println("//////符号表//////");
+//        System.out.println(symbolBoard);
+    }
+
+    public String getTokens() {
+        StringBuilder stringBuilder = new StringBuilder();
+        for (Token token : tokens)
+            stringBuilder.append(token).append("\n");
+        return stringBuilder.toString();
+    }
+
+    public String getErrors() {
+        StringBuilder stringBuilder = new StringBuilder();
+        for (String error : errors) {
+            stringBuilder.append(error).append("\n");
+        }
+        return stringBuilder.toString();
     }
 
     public static void main(String[] args) {
