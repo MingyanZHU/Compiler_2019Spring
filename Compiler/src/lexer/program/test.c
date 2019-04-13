@@ -1,3 +1,8 @@
+struct student{
+	int id;
+	char [] name;
+};
+
 while(num != 0)
 {    
 	num = num + 1;
