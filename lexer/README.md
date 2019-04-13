@@ -23,3 +23,75 @@
    1. 核心数据结构的设计
    2. 主要功能函数说明
    3. 程序核心部分的程序流程图
+
+# 系统实现及结果分析
+
+## 测试结果
+```
+<STRUCT>
+<ID, student>
+<LP>
+<INT>
+<ID, id>
+<SEMICOLON>
+<CHAR>
+<MLP>
+<MRP>
+<ID, name>
+<SEMICOLON>
+<RP>
+<SEMICOLON>
+<WHILE>
+<SLP>
+<ID, num>
+<NE>
+<NUM, 0>
+<SRP>
+<LP>
+<ID, num>
+<ASSIGN>
+<ID, num>
+<ADD>
+<NUM, 1>
+<SEMICOLON>
+<ID, x>
+<ASSIGN>
+<REAL, 0.0>
+<SEMICOLON>
+<ID, string>
+<ASSIGN>
+<SEMICOLON>
+<INT>
+<ID, _aInt>
+<ASSIGN>
+<NUM, 100>
+<SEMICOLON>
+<ID, a>
+<MLP>
+<NUM, 10>
+<MRP>
+<ASSIGN>
+<NUM, 100>
+<SEMICOLON>
+<BOOL>
+<ID, b>
+<ASSIGN>
+<FALSE>
+<SEMICOLON>
+<INT>
+<NUM, 123>
+<ID, Bcd>
+<SEMICOLON>
+<INT>
+<ID, y>
+<ASSIGN>
+<REAL, 1.22E10>
+<SEMICOLON>
+<RP>
+```
+
+## 错误信息
+```
+[ERROR 11]"Hello world!\n字符串格式错误
+[ERROR 14]"#"为未定义的字符
+```
