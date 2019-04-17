@@ -1,26 +1,31 @@
-# 文法1 不是LR(1)
+# 文法1
 
 P -> D P | S P | Epsilon.
-D -> prco X id ( M ) @ P # | T id A ; | record id @ P #.
+D -> prco X id ( M ) @ P # | record id @ P #.
+Block -> @ Decls Stmts #.
+Decls -> Decls Decl | Epsilon.
+Decl -> T id A ;.
+Stmts -> Stmts S | Epsilon.
 A -> : F A | _ id A | Epsilon.
 M -> M _ X id | X id.
 T -> X C.
-X -> int | float | char.
+X -> int | float.
 C -> @@ digit ## C | Epsilon.
-S -> L : E; | if ( B ) S else S | do S while ( B ) ; | call id ( Elist ) ; | return E ;.
+S -> MatchedS | OpenS.
+MatchedS -> if ( B ) MatchedS else MatchedS | L : E ; | do S while ( B ) ; | call id ( Elist ) ; | return E ; | Block | break ;.
+OpenS -> if ( B ) S | if ( B ) MatchedS else OpenS.
 L -> L @@ digit ## | id.
 E -> E + G | G.
 G -> G * F | F.
 F -> ( E ) | digit | id.
-B -> H B1.
-B1 -> or H B1 | Epslion.
-H -> I H1.
-H1 -> and I H1 | Epslion.
-I -> not B | ( B ) | E Relop E | true | false.
+B -> B or H | H.
+H -> H and I | I.
+I -> not I | ( B ) | E Relop E | true | false.
 Relop -> ? | ?: | ~ | ~: | :: | !:.
 Elist -> Elist _ E | E.
-Epslion -> .
+Epslion ->.
 
+S -> L : E ; | if ( B ) S else S | do S while ( B ) ; | call id ( Elist ) ; | return E ; | if ( B ) S | Block | break ;.
 <!-- replace '{' with '@' 
     replace '}' with '#'
     replace ',' with '_'
@@ -41,14 +46,60 @@ M -> M _ X id | X id.
 T -> X C.
 X -> int | float | char.
 C -> @@ digit ## C | Epsilon.
-S -> L : E; | if ( B ) S else S | do S while ( B ) ; | call id ( Elist ) ; | return E ;.
+S -> L : E ; | if ( B ) S else S | do S while ( B ) ; | call id ( Elist ) ; | return E ;.
 L -> L @@ digit ## | id.
 E -> E + G | G.
 G -> G * F | F.
 F -> ( E ) | digit | id.
 SE -> SE or AndE | AndE.
 AndE -> AndE and UnaryE | UnaryE.
-UnaryE -> not UnaryE | E Relop E | true | false.
+UnaryE -> not UnaryE | ( SE ) | E Relop E | true | false.
 Relop -> ? | ?: | ~ | ~: | :: | !:.
 Elist -> Elist _ E | E.
 Epslion -> .
+
+**文法1和文法2均是LR(1), 但不是SLR(1)**
+
+# 确定的文法
+
+Program -> P
+
+P -> D P | S P | epsilon
+
+D -> prco X id ( M ) { P } | record id { P }
+
+Block -> { Delcs Stmts }
+
+Delcs -> Delcs Delc | epsilon
+
+Delc -> T id A ; 
+
+Stmts -> Stmts S | epsilon
+
+A -> = F A | , id A | epsilon
+
+M -> M, X id | X id
+
+T -> X C
+
+X -> int | float | char 
+
+C -> [ num ] C | epsilon
+
+S -> L = E ; | if ( B ) S else S | if ( B ) S | do S while ( B ) ; | call id ( Elist ) ; | return E ; | break ; | Block
+
+L -> L [ num ] | id
+
+E -> E + G | G
+
+F -> ( E ) | num | id
+
+B -> B or H | H
+
+H -> H and I | I
+
+I -> not I | ( B ) | E Relop E | true | false
+
+Relop -> < | <= | > | >= | == | !=
+
+Elist -> Elist , E | E
