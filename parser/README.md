@@ -62,35 +62,41 @@ Epslion -> .
 
 # 确定的文法
 
-Program -> P
+Start -> P
 
-P -> D P | S P | epsilon
+P -> D P | S P | ε
 
 D -> prco X id ( M ) { P } | record id { P }
 
 Block -> { Delcs Stmts }
 
-Delcs -> Delcs Delc | epsilon
+Delcs -> Delcs Delc | ε
 
 Delc -> T id A ; 
 
-Stmts -> Stmts S | epsilon
+Stmts -> Stmts S | ε
 
-A -> = F A | , id A | epsilon
+A -> = F A | , id A | ε
 
-M -> M, X id | X id
+M -> M , X id | X id
 
 T -> X C
 
 X -> int | float | char 
 
-C -> [ num ] C | epsilon
+C -> [ num ] C | ε
 
-S -> L = E ; | if ( B ) S else S | if ( B ) S | do S while ( B ) ; | call id ( Elist ) ; | return E ; | break ; | Block
+S -> MachedS | OpenS
+
+MachedS -> if ( B ) MachedS else MachedS | L = E ; | do S while ( B ) ; | call id ( Elist ) ; | return E ; | break ; | Block
+
+OpenS -> if ( B ) S | if ( B ) MachedS else OpenS
 
 L -> L [ num ] | id
 
 E -> E + G | G
+
+G -> G * F | F
 
 F -> ( E ) | num | id
 

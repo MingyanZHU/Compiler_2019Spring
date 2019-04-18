@@ -8,13 +8,14 @@ import java.util.Objects;
 public class Production {
     private final String left;
     private final List<String> right;
-    public Production(String left, String [] right){
+
+    public Production(String left, String[] right) {
         this.left = left;
         this.right = new ArrayList<>(Arrays.asList(right));
     }
 
-    private String [] toArray(){
-        String [] ans = new String[right.size()];
+    private String[] toArray() {
+        String[] ans = new String[right.size()];
         ans = right.toArray(ans);
         return ans;
     }
@@ -39,5 +40,17 @@ public class Production {
 
     public List<String> getRight() {
         return right;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(left).append("->");
+        for (int i = 0; i < right.size(); i++) {
+            stringBuilder.append(right.get(i));
+//            if (i != right.size() - 1)
+//                stringBuilder.append(" ");
+        }
+        return stringBuilder.toString();
     }
 }

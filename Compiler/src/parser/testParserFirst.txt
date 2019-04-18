@@ -1,3 +1,47 @@
-E -> E + T | T
-T -> T * F | F
-F -> ( E ) | id
+Start -> P
+
+P -> D P | S P | ε
+
+D -> prco X id ( M ) { P } | record id { P }
+
+Block -> { Delcs Stmts }
+
+Delcs -> Delcs Delc | ε
+
+Delc -> T id A ;
+
+Stmts -> Stmts S | ε
+
+A -> = F A | , id A | ε
+
+M -> M , X id | X id
+
+T -> X C
+
+X -> int | float | char
+
+C -> [ num ] C | ε
+
+S -> MachedS | OpenS
+
+MachedS -> if ( B ) MachedS else MachedS | L = E ; | do S while ( B ) ; | call id ( Elist ) ; | return E ; | break ; | Block
+
+OpenS -> if ( B ) S | if ( B ) MachedS else OpenS
+
+L -> L [ num ] | id
+
+E -> E + G | G
+
+G -> G * F | F
+
+F -> ( E ) | num | id
+
+B -> B or H | H
+
+H -> H and I | I
+
+I -> not I | ( B ) | E Relop E | true | false
+
+Relop -> < | <= | > | >= | == | !=
+
+Elist -> Elist , E | E
