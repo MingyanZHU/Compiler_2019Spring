@@ -16,7 +16,7 @@ public class Lexer {
     private final List<Token> tokens = new ArrayList<>();
     private final List<String> errors = new ArrayList<>();
     private BufferedReader bufferedReader;
-    private static final Set<String> keywords = new HashSet<>(Arrays.asList("int", "double", "bool", "char", "struct", "if", "else", "while", "do", "break", "continue", "true", "false"));
+    private static final Set<String> keywords = new HashSet<>(Arrays.asList("int", "float", "bool", "char", "record", "if", "else", "while", "do", "break", "continue", "true", "false", "proc", "call", "return"));
     private static final Set<Character> skipSymbol = new HashSet<>(Arrays.asList(' ', '\t', '\n'));
     private static final Set<Character> delimiters = new HashSet<>(Arrays.asList(',', '=', ';', '[', ']', '{', '}', '(', ')'));
     private static final Set<Character> ambiguousSymbol = new HashSet<>(Arrays.asList('!', '&', '|', '>', '<', '/', '='));

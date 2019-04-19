@@ -1,0 +1,48 @@
+Start -> P.
+P -> P Declaration | Declaration.
+Declaration -> VarDeclaration | FunDeclaration | RecDeclaration.
+RecDeclaration -> record id @ LocationDeclarations #.
+VarDeclaration -> TypeSpecifier VarDeclList ;.
+VarDecList -> VarDecList _ VarDeclInitialize | VarDeclInitialize.
+ScopedVarDeclaration -> TypeSpecifier VarDeclList ;.
+VarDeclList -> VarDeclList _ VarDeclInitialize | VarDecInitialize.
+VarDeclInitialize -> id | id @@ num ## C.
+C -> @@ num ## | E.
+TypeSpecifier -> ReturnTypeSpecifier | record id.
+ReturnTypeSpecifier -> int | bool | char | float.
+FunDeclaration -> TypeSpecifier id ( Params ) Statement | id ( params ) Statement.
+Params -> ParamList | E.
+ParamList -> ParamList ; ParamTypeList | ParamTypeList.
+ParaTypeList -> TypeSpecifier ParamIdList.
+ParamIdList -> ParamIdList _ ParamId | ParamId.
+ParamId -> id | id @@ ## C1.
+C1 -> @@ ## C1 | E.
+Statement -> ExpressionStmt | CompoundStmt | SelectionStmt | IterationStmt | ReturnStmt | BreakStmt.
+CompoundStmt -> @ LocalDeclarations StatementList #.
+LocalDeclarations -> LocalDeclarations ScopedVarDeclaration | E.
+StatementList -> StatementList Statement | E.
+ExpressionStmt -> Expression ; | ;.
+SelectionStmt -> if ( SimpleExpression ) Statement else Statement.
+IterationStmt -> do Statement while ( SimpleExpression ) ;.
+ReturnStmt -> return ; | return Expression ;.
+BreakStmt -> break ;.
+Expression -> Mutable : Expression | SimpleExpression.
+SimpleExpression -> SimpleExpression or AndExpression | AndExpression.
+AndExpression -> AndExpression and UnaryRelExpression | UnaryRelExpression.
+UnaryRelExpression -> ! UnaryRelExpression | RelExpression.
+RelExpression -> SumExpression RelationOp SumExpression | SumExpression.
+RelationOp -> ~: | ~ | ~~ | ~~: | :: | !:.
+SumExpression -> SumExpression SumOp Term | Term.
+SumOp -> + | ?.
+Term -> Term MulOp UnaryExpression | UnaryExpression.
+MulOp -> * | / | ??.
+UnaryExpression -> ? UnaryExpression | Factor.
+Factor -> Immutable | Mutable.
+Mutable -> id | Mutable @@ Expression ## C2.
+C2 -> @@ Expression ## C2 | E.
+Immutable -> ( Expression ) | Call | Constant.
+Call -> id ( Args ).
+Args -> ArgList | E.
+ArgList -> ArgList _ Expression | Expression.
+Constant -> num | true | real | string | false | null.
+E -> .

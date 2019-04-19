@@ -27,6 +27,7 @@ public class Utils {
     private Map<Integer, Map<String, Integer>> gotoTable = new HashMap<>();
     private String[][] lrTable;
     private List<String> lrTableHead;
+    private Set<String> synchronizingTokens = new HashSet<>(Arrays.asList(Tag.SEMICOLON.getValue(), Tag.RP.getValue()));
 
 
     public Utils(String grammarPath) {
@@ -488,14 +489,17 @@ public class Utils {
             currentState = stateStack.peek() + 1;
             currentSymbol = tokens.get(status).getTag().getValue();
             int aIndex = lrTableHead.indexOf(currentSymbol) + 1;
+            boolean errorOccurred = false;
             if (lrTable[currentState][aIndex].length() == 0) {
-                System.err.println("Error at line[" + tokens.get(status).getLine() + "]\nState "
+                System.err.println("Error at line[" + tokens.get(status).getLine() + "]\tState "
                         + currentState + ", stack top " + currentSymbol);
-                break;
+                errorOccurred = true;
             } else if (lrTable[currentState][aIndex].charAt(0) == 's') {
                 // 移入
                 stateStack.push(Integer.parseInt(lrTable[currentState][aIndex].substring(1)));
                 symbolStack.push(tokens.get(status++).getTag().getValue());
+                if (status >= tokens.size())
+                    errorOccurred = true;
             } else if (lrTable[currentState][aIndex].charAt(0) == 'r') {
                 // 规约
                 Production currentReduceProduction = getProductionFromLRTable(lrTable[currentState][aIndex]);
@@ -510,9 +514,20 @@ public class Utils {
             } else if (lrTable[currentState][aIndex].equals("acc")) {
                 break;
             } else {
-                System.err.println("Error at line[" + tokens.get(status).getLine() + "]\nState "
+                System.err.println("Error at line[" + tokens.get(status).getLine() + "]\tState "
                         + currentState + ", stack top " + currentSymbol);
-                break;
+                errorOccurred = true;
+            }
+
+            if (errorOccurred) {
+                while (status < tokens.size()) {
+                    String token = tokens.get(status).getTag().getValue();
+                    status++;
+                    if (synchronizingTokens.contains(token))
+                        break;
+                }
+                if (status >= tokens.size())
+                    return ans;
             }
         }
         return ans;

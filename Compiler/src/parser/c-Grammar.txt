@@ -1,0 +1,51 @@
+Start -> P
+P -> P Declaration 丨 Declaration
+Declaration -> VarDeclaration 丨 FunDeclaration 丨 RecDeclaration
+
+RecDeclaration -> record id { LocationDeclarations }
+
+VarDeclaration -> TypeSpecifier VarDeclList ;
+VarDecList -> VarDecList , VarDeclInitialize 丨 VarDeclInitialize
+ScopedVarDeclaration -> TypeSpecifier VarDeclList ;
+VarDeclList -> VarDeclList , VarDeclInitialize 丨 VarDecInitialize
+VarDeclInitialize -> id 丨 id [ num ] C
+C -> [ num ] 丨 ε
+TypeSpecifier -> ReturnTypeSpecifier 丨 record id
+ReturnTypeSpecifier -> int 丨 bool 丨 char 丨 float
+
+FunDeclaration -> TypeSpecifier id ( Params ) Statement 丨 id ( params ) Statement
+Params -> ParamList 丨 ε
+ParamList -> ParamList ; ParamTypeList 丨 ParamTypeList
+ParaTypeList -> TypeSpecifier ParamIdList
+ParamIdList -> ParamIdList , ParamId 丨 ParamId
+ParamId -> id 丨 id [ ] C1
+C1 -> [ ] C1 丨 ε
+
+Statement -> ExpressionStmt 丨 CompoundStmt 丨 SelectionStmt 丨 IterationStmt 丨 ReturnStmt 丨 BreakStmt
+CompoundStmt -> { LocalDeclarations StatementList }
+LocalDeclarations -> LocalDeclarations ScopedVarDeclaration 丨 ε
+StatementList -> StatementList Statement 丨 ε
+ExpressionStmt -> Expression ; 丨 ;
+SelectionStmt -> if ( SimpleExpression ) Statement else Statement
+IterationStmt -> do Statement while ( SimpleExpression ) ;
+ReturnStmt -> return ; 丨 return Expression ;
+BreakStmt -> break ;
+Expression -> Mutable = Expression 丨 SimpleExpression
+SimpleExpression -> SimpleExpression || AndExpression 丨 AndExpression
+AndExpression -> AndExpression && UnaryRelExpression 丨 UnaryRelExpression
+UnaryRelExpression -> ! UnaryRelExpression 丨 RelExpression
+RelExpression -> SumExpression RelationOp SumExpression 丨 SumExpression
+RelationOp -> <= 丨 < 丨 > 丨 >= 丨 == 丨 !=
+SumExpression -> SumExpression SumOp Term 丨 Term
+SumOp -> + 丨 -
+Term -> Term MulOp UnaryExpression 丨 UnaryExpression
+MulOp -> * 丨 / 丨 %
+UnaryExpression -> - UnaryExpression 丨 Factor
+Factor -> Immutable 丨 Mutable
+Mutable -> id 丨 Mutable [ Expression ] C2
+C2 -> [ Expression ] C2 | ε
+Immutable -> ( Expression ) 丨 Call 丨 Constant
+Call -> id ( Args )
+Args -> ArgList 丨 ε
+ArgList -> ArgList , Expression 丨 Expression
+Constant -> num 丨 true 丨 real 丨 string 丨 false 丨 null
