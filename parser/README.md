@@ -1,3 +1,5 @@
+**这个README内容过于混乱，参考Compiler/src/parser/README**
+
 # 文法1
 
 P -> D P | S P | Epsilon.

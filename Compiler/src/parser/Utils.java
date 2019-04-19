@@ -6,7 +6,7 @@ import lexer.Token;
 
 import java.io.*;
 import java.util.*;
-
+// TODO 重构此部分代码
 public class Utils {
     public static final String START_STATE = "Start";
     public static final String STACK_BOTTOM_CHARACTER = "#";
