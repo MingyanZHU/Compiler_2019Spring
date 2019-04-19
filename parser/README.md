@@ -138,3 +138,25 @@ Relop -> < | <= | > | >= | == | !=
 Elist -> Elist , E | E
 
 **最终使用的文法为`Compiler/src/parser/Grammar.txt`**
+
+
+# 老师给的文法
+
+Start -> P
+P -> D P 丨 S P 丨 ε
+D -> prco X id ( M ) { P } 丨 record id { P } 丨 T id A ;
+A -> = F A 丨 , id A 丨 ε
+M -> M , X id 丨 X id
+T -> X C
+X -> int 丨 float
+C -> [ num ] C 丨 ε
+S -> L = E ; 丨 if ( B ) S else S 丨 do S while ( B ) ; 丨 call id ( Elist ) ; 丨 return E ;
+L -> L [ num ] 丨 id
+E -> E + G 丨 G
+G -> G * F 丨 F
+F -> ( E ) 丨 num 丨 id
+B -> B || H 丨 H
+H -> H && I 丨 I
+I -> ! I 丨 ( B ) 丨 E Relop E 丨 true 丨 false
+Relop -> < 丨 <= 丨 > 丨 >= 丨 == 丨 !=
+Elist -> Elist , E 丨 E

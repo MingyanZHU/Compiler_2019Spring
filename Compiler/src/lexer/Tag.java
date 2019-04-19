@@ -1,15 +1,18 @@
 package lexer;
 
+import parser.Utils;
+
 public enum Tag {
-    INT("int"), FLOAT("float"), BOOL("bool"), CHAR("char"), STRUCT("struct"), IF("if"),
+    INT("int"), FLOAT("float"), BOOL("bool"), CHAR("char"), STRUCT("record"), IF("if"),
     ELSE("else"), DO("do"), WHILE("while"), BREAK("break"), CONTINUE("continue"), TRUE("true"), FALSE("false"), // keyword
     ADD("+"), SUB("-"), MUL("*"), DIV("/"), MOD("%"), // arithmetic op
     NE("!="), G(">"), GE(">="), L("<"), LE("<="), EQ("=="), // logical op
     SLP("("), SRP(")"), LP("{"), RP("}"), MLP("["), MRP("]"), ASSIGN("="), SEMICOLON(";"), // delimiters
-    REAL("REAL"), // float number
-    NUM("NUM"), // integer number
-    ID("ID"),  // identifier
+    REAL("real"), // float number
+    NUM("num"), // integer number
+    ID("id"),  // identifier
     STRING("STRING"),
+    STACK_BOTTOM(Utils.STACK_BOTTOM_CHARACTER),
     NULL("null");
 
     private String value;

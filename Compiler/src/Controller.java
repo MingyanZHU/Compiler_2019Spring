@@ -38,7 +38,7 @@ public class Controller {
                         "-fx-text-fill: #ff4a1c;");
 
                 tokenArea.setEditable(false);
-                tokenArea.setText(lexer.getTokens());
+                tokenArea.setText(lexer.getTokensList());
 
                 lexerErrorArea.setEditable(false);
                 lexerErrorArea.setText(lexer.getErrors());

@@ -12,7 +12,7 @@ Delc -> T id A ;
 
 Stmts -> Stmts S 丨 ε
 
-A -> = F A 丨 , id A 丨 ε
+A -> = Factor A 丨 , id A 丨 ε
 
 M -> M , X id 丨 X id
 

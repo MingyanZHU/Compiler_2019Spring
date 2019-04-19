@@ -34,6 +34,7 @@ public class Lexer {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        scan();
     }
 
     private boolean isDigit(char c) {
@@ -316,11 +317,15 @@ public class Lexer {
 //        System.out.println(symbolBoard);
     }
 
-    public String getTokens() {
+    public String getTokensList() {
         StringBuilder stringBuilder = new StringBuilder();
         for (Token token : tokens)
             stringBuilder.append(token).append("\n");
         return stringBuilder.toString();
+    }
+
+    public List<Token> getTokens() {
+        return new ArrayList<>(tokens);
     }
 
     public String getErrors() {
@@ -333,6 +338,6 @@ public class Lexer {
 
     public static void main(String[] args) {
         Lexer lexer = new Lexer("src/lexer/program/test.c");
-        lexer.scan();
+//        lexer.scan();
     }
 }
