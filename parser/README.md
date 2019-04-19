@@ -23,7 +23,7 @@ H -> H and I | I.
 I -> not I | ( B ) | E Relop E | true | false.
 Relop -> ? | ?: | ~ | ~: | :: | !:.
 Elist -> Elist _ E | E.
-Epslion ->.
+Epsilon ->.
 
 S -> L : E ; | if ( B ) S else S | do S while ( B ) ; | call id ( Elist ) ; | return E ; | if ( B ) S | Block | break ;.
 <!-- replace '{' with '@' 
@@ -109,3 +109,32 @@ I -> not I | ( B ) | E Relop E | true | false
 Relop -> < | <= | > | >= | == | !=
 
 Elist -> Elist , E | E
+
+
+
+Start -> P
+P -> D P | S P | ε
+D -> prco X id ( M ) { P } | record id { P }
+Block -> { Decls Stmts }
+Decls -> Decls Decl | ε
+Decl -> T id A ;
+Stmts -> Stmts S | ε
+A -> = F A | , id A | ε
+M -> M , X id | X id
+T -> X C
+X -> int | float
+C -> [ digit ] C | ε
+S -> MatchedS | OpenS
+MatchedS -> if ( B ) MatchedS else MatchedS | L = E ; | do S while ( B ) ; | call id ( Elist ) ; | return E ; | Block | break ;
+OpenS -> if ( B ) S | if ( B ) MatchedS else OpenS
+L -> L [ digit ] | id
+E -> E + G | G
+G -> G * F | F
+F -> ( E ) | digit | id
+B -> B or H | H
+H -> H and I | I
+I -> not I | ( B ) | E Relop E | true | false
+Relop -> < | <= | > | >= | == | !=
+Elist -> Elist , E | E
+
+**最终使用的文法为`Compiler/src/parser/Grammar.txt`**

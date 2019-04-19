@@ -45,11 +45,11 @@ public class Production {
     @Override
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(left).append("->");
+        stringBuilder.append(left).append(" -> ");
         for (int i = 0; i < right.size(); i++) {
             stringBuilder.append(right.get(i));
-//            if (i != right.size() - 1)
-//                stringBuilder.append(" ");
+            if (i != right.size() - 1)
+                stringBuilder.append(" ");
         }
         return stringBuilder.toString();
     }

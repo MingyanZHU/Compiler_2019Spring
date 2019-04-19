@@ -12,6 +12,12 @@ public class ItemSet {
         this.index = index;
     }
 
+    public ItemSet(Set<Item> itemSet, int index, Map<String, Integer> gotoTable) {
+        this.itemSet = itemSet;
+        this.index = index;
+        this.gotoTable = gotoTable;
+    }
+
     public void addGOTO(String search, int itemSetIndex) {
         gotoTable.put(search, itemSetIndex);
     }
@@ -33,7 +39,9 @@ public class ItemSet {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ItemSet itemSet1 = (ItemSet) o;
-        return itemSet.containsAll(itemSet1.itemSet) && itemSet1.itemSet.containsAll(itemSet);
+        if (itemSet1.getItemSet().size() != itemSet.size())
+            return false;
+        return itemSet.containsAll(itemSet1.itemSet);
     }
 
     @Override
