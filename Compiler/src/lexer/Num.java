@@ -4,8 +4,8 @@ public class Num extends Token {
     // 用于处理整数
     private final int value;
 
-    public Num(Tag tag, int value) {
-        super(tag);
+    public Num(Tag tag, int value, int line) {
+        super(tag, line);
         this.value = value;
     }
 

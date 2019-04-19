@@ -4,8 +4,8 @@ public class Real extends Token {
     // 用于处理浮点数
     private final double value;
 
-    public Real(Tag tag, double value) {
-        super(tag);
+    public Real(Tag tag, double value, int line) {
+        super(tag, line);
         this.value = value;
     }
 

@@ -441,7 +441,7 @@ public class Utils {
         }
     }
 
-    public List<Production> reduce(List<String> tokens) {
+    public List<Production> reduce(List<Token> tokens) {
         List<Production> ans = new ArrayList<>();
 //        Stack<Integer> state = new Stack<>();
 //        state.push(0);
@@ -486,15 +486,16 @@ public class Utils {
         String currentSymbol;
         while (true) {
             currentState = stateStack.peek() + 1;
-            currentSymbol = tokens.get(status);
+            currentSymbol = tokens.get(status).getTag().getValue();
             int aIndex = lrTableHead.indexOf(currentSymbol) + 1;
             if (lrTable[currentState][aIndex].length() == 0) {
-                System.err.println("State " + currentState + ", stack top " + currentSymbol);
+                System.err.println("Error at line[" + tokens.get(status).getLine() + "]\nState "
+                        + currentState + ", stack top " + currentSymbol);
                 break;
             } else if (lrTable[currentState][aIndex].charAt(0) == 's') {
                 // 移入
                 stateStack.push(Integer.parseInt(lrTable[currentState][aIndex].substring(1)));
-                symbolStack.push(tokens.get(status++));
+                symbolStack.push(tokens.get(status++).getTag().getValue());
             } else if (lrTable[currentState][aIndex].charAt(0) == 'r') {
                 // 规约
                 Production currentReduceProduction = getProductionFromLRTable(lrTable[currentState][aIndex]);
@@ -509,7 +510,8 @@ public class Utils {
             } else if (lrTable[currentState][aIndex].equals("acc")) {
                 break;
             } else {
-                System.err.println("State " + currentState + ", stack top " + currentSymbol);
+                System.err.println("Error at line[" + tokens.get(status).getLine() + "]\nState "
+                        + currentState + ", stack top " + currentSymbol);
                 break;
             }
         }
@@ -526,15 +528,15 @@ public class Utils {
     public static void main(String[] args) throws FileNotFoundException {
         Lexer lexer = new Lexer("src/lexer/program/test.c");
         List<Token> tokens = lexer.getTokens();
-        tokens.add(new Token(Tag.STACK_BOTTOM));
-        List<String> tokenInput = new ArrayList<>();
-        for(Token token : tokens){
-            tokenInput.add(token.getTag().getValue());
+        tokens.add(new Token(Tag.STACK_BOTTOM, lexer.getLines()));
+//        List<String> tokenInput = new ArrayList<>();
+        for (Token token : tokens) {
+//            tokenInput.add(token.getTag().getValue());
             System.out.println(token);
         }
-        for(String s : tokenInput){
-            System.out.println(s);
-        }
+//        for (String s : tokenInput) {
+//            System.out.println(s);
+//        }
 //        List<String> tokenInput = new ArrayList<>();
 //        tokenInput.add("a");
 //        tokenInput.add("b");
@@ -602,7 +604,7 @@ public class Utils {
         }
         System.setOut(origin);
 
-        List<Production> productions = utils.reduce(tokenInput);
+        List<Production> productions = utils.reduce(tokens);
         for (Production production : productions)
             System.out.println(production);
     }

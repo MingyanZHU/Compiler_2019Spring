@@ -64,10 +64,10 @@ public class Lexer {
         }
         String ans = builder.toString();
         if (keywords.contains(ans))
-            return new Token(Tag.valueOf(ans.toUpperCase()));
+            return new Token(Tag.valueOf(ans.toUpperCase()), lines);
         else {
             symbolBoard.putSymbolItem(ans, new SymbolItem(ans, Tag.ID, lines, -1));
-            return new Word(Tag.ID, ans);
+            return new Word(Tag.ID, ans, lines);
         }
     }
 
@@ -161,9 +161,9 @@ public class Lexer {
             e.printStackTrace();
         }
         if (state == 10)
-            return new Num(Tag.NUM, Integer.valueOf(stringBuilder.toString()));
+            return new Num(Tag.NUM, Integer.valueOf(stringBuilder.toString()), lines);
         else
-            return new Real(Tag.REAL, Double.valueOf(stringBuilder.toString()));
+            return new Real(Tag.REAL, Double.valueOf(stringBuilder.toString()), lines);
     }
 
     private void reconComment(String start) {
@@ -229,7 +229,7 @@ public class Lexer {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return new Word(Tag.STRING, stringBuilder.toString());
+        return new Word(Tag.STRING, stringBuilder.toString(), lines);
     }
 
     private void panicMode() {
@@ -277,23 +277,23 @@ public class Lexer {
                         char c2 = !buffer.isEmpty() ? buffer.poll() : (char) bufferedReader.read();
                         String temp = String.valueOf(new char[]{c, c2});
                         if (relationOp.contains(temp) || logicalOp.contains(temp)) {
-                            token = new Token(Tag.fromString(temp));
+                            token = new Token(Tag.fromString(temp), lines);
 //                            System.out.println(token);
                             tokens.add(token);
                         } else if (temp.equals("/*")) {
                             reconComment(temp);
                         } else {
-                            token = new Token(Tag.fromString(String.valueOf(c)));
+                            token = new Token(Tag.fromString(String.valueOf(c)), lines);
 //                            System.out.println(token);
                             tokens.add(token);
                             buffer.add(c2);
                         }
                     } else if (arithmeticOp.contains(c)) {
-                        token = new Token(Tag.fromString(String.valueOf(c)));
+                        token = new Token(Tag.fromString(String.valueOf(c)), lines);
 //                        System.out.println(token);
                         tokens.add(token);
                     } else if (delimiters.contains(c)) {
-                        token = new Token(Tag.fromString(String.valueOf(c)));
+                        token = new Token(Tag.fromString(String.valueOf(c)), lines);
 //                        System.out.println(token);
                         tokens.add(token);
                     } else {
@@ -334,6 +334,10 @@ public class Lexer {
             stringBuilder.append(error).append("\n");
         }
         return stringBuilder.toString();
+    }
+
+    public int getLines() {
+        return lines;
     }
 
     public static void main(String[] args) {
