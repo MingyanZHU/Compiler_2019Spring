@@ -4,7 +4,6 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TextArea;
 import lexer.Lexer;
-import parser.Item;
 import parser.Parser;
 import parser.Production;
 
@@ -39,7 +38,7 @@ public class Controller {
             lexer = new Lexer(sourcePath);
             lexer.scan();
             parser = new Parser(grammarPath);
-            parser.items(new Item(Parser.START_STATE, new String[]{"P"}, 0, Parser.STACK_BOTTOM_CHARACTER));
+            parser.items();
             parser.outputLRTableToFile();
         } catch (IOException e) {
             e.printStackTrace();
@@ -65,18 +64,21 @@ public class Controller {
         alert.showAndWait();
     }
 
+    private void lexerReadSourceCode() throws IOException {
+        BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(sourcePath)));
+        bufferedWriter.write(sourceCode.getText());
+        bufferedWriter.close();
+
+        lexer = new Lexer(sourcePath);
+    }
+
     public void tabChanged() {
         try {
             if (sourceTab.isSelected()) {
                 String code = readFromFile(sourcePath);
                 sourceCode.setText(code);
             } else if (lexerTab.isSelected()) {
-                BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(sourcePath)));
-                bufferedWriter.write(sourceCode.getText());
-                bufferedWriter.close();
-
-                lexer = new Lexer(sourcePath);
-                lexer.scan();
+                lexerReadSourceCode();
                 lexerErrorArea.setStyle(errorCSS);
 
                 tokenArea.setEditable(false);
@@ -92,20 +94,21 @@ public class Controller {
                 String lrTable = readFromFile(lrTablePath);
                 lrTableArea.setEditable(false);
                 lrTableArea.setText(lrTable);
-            } else if(parserTab.isSelected()){
+            } else if (parserTab.isSelected()) {
+                lexerReadSourceCode();
                 List<Production> productions = parser.reduce(lexer.getTokens());
                 StringBuilder productionOutput = new StringBuilder();
-                for(Production production : productions)
+                for (Production production : productions)
                     productionOutput.append(production.toString()).append("\n");
                 parserProductions.setText(productionOutput.toString());
                 parserProductions.setEditable(false);
 
                 parserErrorArea.setStyle(errorCSS);
                 StringBuilder parserError = new StringBuilder();
-                for(String error : parser.getErrorMessages())
+                for (String error : parser.getErrorMessages())
                     parserError.append(error).append("\n");
+                parserErrorArea.setText(parserError.toString());
                 parserErrorArea.setEditable(false);
-                parserErrorArea.setStyle(parserError.toString());
             }
         } catch (IOException e) {
             e.printStackTrace();

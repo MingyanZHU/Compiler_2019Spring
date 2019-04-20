@@ -35,6 +35,7 @@ public class Lexer {
             e.printStackTrace();
         }
         scan();
+        tokens.add(new Token(Tag.STACK_BOTTOM, lines));
     }
 
     private boolean isDigit(char c) {
@@ -342,6 +343,5 @@ public class Lexer {
 
     public static void main(String[] args) {
         Lexer lexer = new Lexer("src/lexer/program/test.c");
-//        lexer.scan();
     }
 }

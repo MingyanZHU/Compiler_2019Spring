@@ -20,13 +20,13 @@ float f = 10.0;
 
 char [10] s = "Hello";
 
-proc int function(int x){
-    int y ;
+proc int function(int x, int y){
     y = x + 1;
     return y;
 }
 
-/*call function(a, d);*/
-record x {
+call function(a, d);
+/*record stu {
     int z = 1;
-}
+}*/
+int xx = 1;

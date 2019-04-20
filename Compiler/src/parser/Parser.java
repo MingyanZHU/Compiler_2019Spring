@@ -11,12 +11,16 @@ import java.util.*;
 
 // TODO 增加对错误信息的处理
 public class Parser {
-    public static final String START_STATE = "Start";
-    public static final String ACCEPT_STRING = "acc";
-    public static final String STACK_BOTTOM_CHARACTER = "#";
-    public static final String EMPTY_STRING_CHARACTER = "ε";
-    public static final String PRODUCTION_DELIMITER = "丨";
-    public static final String REDUCTION_SYMBOL = "->";
+    public static final String PRODUCE_START_STATE = "Start";   // 增广文法的开始符号
+    public static final String START_STATE = "P";   // 真正的开始符号
+    public static final String ACCEPT_STRING = "acc";   // 接收符号
+    public static final String STACK_BOTTOM_CHARACTER = "#";    // 栈底符号
+    public static final String EMPTY_STRING_CHARACTER = "ε";    // 空串符号
+    public static final String PRODUCTION_DELIMITER = "丨";  // 文法分隔符
+    public static final String REDUCTION_SYMBOL = "->"; // 文法产生式推导符号
+
+    public static final Item START_ITEM = new Item(Parser.PRODUCE_START_STATE, new String[]{START_STATE}, 0, Parser.STACK_BOTTOM_CHARACTER);
+    // 开始项目
 
     private Map<String, Set<String>> first = new HashMap<>();
     private final Map<String, Set<String>> follow = new HashMap<>();
@@ -67,7 +71,7 @@ public class Parser {
 
         lrTableHead = new ArrayList<>(terminators);
         lrTableHead.addAll(nonTerminators);
-        lrTableHead.remove(START_STATE);
+        lrTableHead.remove(PRODUCE_START_STATE);
     }
 
     private void initFirst() {
@@ -245,8 +249,8 @@ public class Parser {
         return getClosure(ans);
     }
 
-    public void items(Item startItem) {
-        Set<Item> startItemSet = getClosure(new HashSet<>(Collections.singletonList(startItem)));
+    public void items() {
+        Set<Item> startItemSet = getClosure(new HashSet<>(Collections.singletonList(START_ITEM)));
         int index = 0;  // 项目集编号从0开始
         ItemSet startClosure = new ItemSet(startItemSet, index);
         itemSets.add(startClosure);
@@ -301,7 +305,7 @@ public class Parser {
     private void fillLrTable() {
         List<String> characters = new ArrayList<>(terminators);
         characters.addAll(nonTerminators);
-        characters.remove(START_STATE);
+        characters.remove(PRODUCE_START_STATE);
 
         // 初始化LR Table
         lrTable = new String[itemSets.size() + 1][characters.size() + 1];
@@ -315,7 +319,7 @@ public class Parser {
             lrTable[i][0] = "" + (i - 1);
         lrTable[0][0] = " ";
 
-        Item startItem = new Item(START_STATE, new String[]{"P"}, 1, STACK_BOTTOM_CHARACTER);
+        Item startItem = new Item(PRODUCE_START_STATE, new String[]{"P"}, 1, STACK_BOTTOM_CHARACTER);
 
         for (ItemSet itemSet : itemSets) {
             Set<Item> items = itemSet.getItemSet();
@@ -334,7 +338,7 @@ public class Parser {
                     }
                     continue;
                 }
-                if (!item.getLeft().equals(START_STATE) &&
+                if (!item.getLeft().equals(PRODUCE_START_STATE) &&
                         (item.getStatus() == item.getRight().length) || (item.getRight().length == 1 && item.getRight()[0].equals(EMPTY_STRING_CHARACTER))) {
                     int j = characters.indexOf(item.getSearch()) + 1;
                     if (lrTable[index][j].length() != 0) {
@@ -380,6 +384,8 @@ public class Parser {
     }
 
     public List<Production> reduce(List<Token> tokens) {
+        errorMessages.clear();
+
         List<Production> ans = new ArrayList<>();
         Stack<Integer> stateStack = new Stack<>();
         Stack<String> symbolStack = new Stack<>();
@@ -387,18 +393,17 @@ public class Parser {
         symbolStack.push(STACK_BOTTOM_CHARACTER);
 
         int status = 0;
+        int errorStatus = status; // 用于避免出现死循环的错误处理 当任意状态处理连续处理两次 则跳过该状态
         int currentState;
         String currentSymbol;
+        StringBuilder errorMessage = new StringBuilder();
         while (true) {
             currentState = stateStack.peek() + 1;
             currentSymbol = tokens.get(status).getTag().getValue();
             int aIndex = lrTableHead.indexOf(currentSymbol) + 1;
             boolean errorOccurred = false;
             if (lrTable[currentState][aIndex].length() == 0) {
-                String errorMessage = "Error at line[" + tokens.get(status).getLine() + "]\tState "
-                        + currentState + ", stack top " + currentSymbol;
-                System.err.println(errorMessage);
-                errorMessages.add(errorMessage);
+                errorMessage.append("Error at line[").append(tokens.get(status).getLine()).append("]");
                 errorOccurred = true;
             } else if (lrTable[currentState][aIndex].charAt(0) == 's') {
                 // 移入
@@ -420,22 +425,70 @@ public class Parser {
             } else if (lrTable[currentState][aIndex].equals(ACCEPT_STRING)) {
                 break;
             } else {
-                String errorMessage = "Error at line[" + tokens.get(status).getLine() + "]\tState "
-                        + currentState + ", stack top " + currentSymbol;
-                System.err.println(errorMessage);
-                errorMessages.add(errorMessage);
+                errorMessage.append("Error at line[").append(tokens.get(status).getLine()).append("]");
                 errorOccurred = true;
             }
 
             if (errorOccurred) {
-                while (status < tokens.size()) {
-                    String token = tokens.get(status).getTag().getValue();
-                    status++;
-                    if (synchronizingTokens.contains(token))
+                String searchSymbol;
+                int recoveryState;
+                int searchSymbolIndex;
+                stateStack.pop();
+                boolean foundA = false;
+                boolean foundErrorReason = false;   // 标记是否找到错误原因
+                while (true) {
+                    searchSymbol = symbolStack.peek();
+                    recoveryState = stateStack.peek() + 1;
+                    searchSymbolIndex = lrTableHead.indexOf(searchSymbol) + 1;
+                    if (nonTerminators.contains(searchSymbol) && lrTable[recoveryState][searchSymbolIndex].length() > 0) {
+                        stateStack.push(Integer.parseInt(lrTable[recoveryState][searchSymbolIndex]));
+                        foundA = true;
                         break;
+                    } else {
+                        stateStack.pop();
+                        symbolStack.pop();
+                        if (stateStack.empty()) {
+                            symbolStack.pop();
+                            break;
+                        }
+                    }
                 }
-                if (status >= tokens.size())
+
+                while (status < tokens.size()) {
+                    String token = tokens.get(status++).getTag().getValue();
+                    recoveryState = stateStack.peek() + 1;
+                    int tokenIndex = lrTableHead.indexOf(token) + 1;
+                    if (foundA && lrTable[recoveryState][tokenIndex].length() > 0) {
+                        foundErrorReason = true;
+                        status--;
+                        errorMessage.append(", Error around ").append(tokens.get(status));
+                        if (errorStatus == status)
+                            ++status;
+                        else
+                            errorStatus = status;
+                        break;
+                    } else if (!foundA && synchronizingTokens.contains(token)) {
+                        status--;
+                        foundErrorReason = true;
+                        errorMessage.append(", Syntax Error");
+                        if (errorStatus == status)
+                            ++status;
+                        else
+                            errorStatus = status;
+                        break;
+                    }
+                }
+                if (status >= tokens.size()) {
+                    if (!foundErrorReason && errorMessage.length() != 0) {
+                        errorMessage.append(", Syntax error");
+                        System.err.println(errorMessage.toString());
+                        errorMessages.add(errorMessage.toString());
+                    }
                     return ans;
+                }
+                System.err.println(errorMessage.toString());
+                errorMessages.add(errorMessage.toString());
+                errorMessage = new StringBuilder();
             }
         }
         return ans;
@@ -460,108 +513,19 @@ public class Parser {
         TextTable textTable = new TextTable(lrTable[0], Arrays.copyOfRange(lrTable, 1, lrTable.length));
         textTable.printTable();
         System.setOut(origin);
-//        BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(lrTableFilePath)));
-//
-//        StringBuilder out = new StringBuilder();
-//        int len = 0;
-//        for (Production production : productions) {
-//            if (len < production.toString().length())
-//                len = production.toString().length();
-//        }
-//        for (String[] row : lrTable) {
-//            for (String s : row) {
-//                String string = String.format("%-" + (len + 2) + "s", s);
-//                out.append(string);
-//            }
-//            out.append("\n");
-//        }
-//        bufferedWriter.write(out.toString());
-//        bufferedWriter.close();
     }
 
 
     public static void main(String[] args) throws IOException {
         Lexer lexer = new Lexer("src/lexer/program/test.c");
         List<Token> tokens = lexer.getTokens();
-        tokens.add(new Token(Tag.STACK_BOTTOM, lexer.getLines()));
-//        List<String> tokenInput = new ArrayList<>();
         for (Token token : tokens) {
-//            tokenInput.add(token.getTag().getValue());
             System.out.println(token);
         }
-//        for (String s : tokenInput) {
-//            System.out.println(s);
-//        }
-//        List<String> tokenInput = new ArrayList<>();
-//        tokenInput.add("a");
-//        tokenInput.add("b");
-//        tokenInput.add("a");
-//        tokenInput.add("b");
-//        tokenInput.add(STACK_BOTTOM_CHARACTER);
-//        for (String token : tokenInput)
-//            System.out.println(token);
         String path = "src/parser/testParserFirst.txt";
         Parser parser = new Parser(path);
-//        for (String non : parser.nonTerminators) {
-//            System.out.println(non);
-//        }
-//        System.out.println("///////////////");
-//        Map<String, Set<String>> ans = parser.getNonTerminatorsFirst();
-//        for (String ter : parser.terminators) {
-//            System.out.println(ter);
-//        }
-//        System.out.println("///////////////");
-//        for (String key : ans.keySet()) {
-//            System.out.println(key);
-//            for (String s : ans.get(key)) {
-//                if (s.length() == 0)
-//                    continue;
-//                System.out.print(s + "\t");
-//            }
-//            System.out.println();
-//        }
-//        Item startItem = new Item("C", new String[]{"c", "C"}, 1, "c");
-//        Item item2 = new Item("C", new String[] {"c", "C"}, 1, "d");
-//        Set<Item> items = parser.goTo(parser.getClosure(new HashSet<>(Arrays.asList(startItem, item2))), "C");
-//        Set<Item> items = parser.getClosure(new HashSet<>(Collections.singletonList(new Item("Start", new String[]{"P"}, 0, "#"))));
-
-        parser.items(new Item(Parser.START_STATE, new String[]{"P"}, 0, Parser.STACK_BOTTOM_CHARACTER));
+        parser.items();
         System.out.println(parser.itemSets.size());
-//        for (ItemSet itemSet : parser.itemSets) {
-//            System.out.println(itemSet);
-//        }
-//        List<Integer> index = new ArrayList<>(parser.itemSets);
-//        Collections.sort(index);
-//        for (int i = 0; i < parser.itemSets.size(); i++) {
-//            if (i != index.get(i)) {
-//                System.err.println(i);
-//                break;
-//            }
-//        }
-//        StringBuilder format = new StringBuilder();
-//        for(int i = 0;i<parser.lrTable[0].length;i++){
-//            format.append()
-//        }
-
-//        PrintStream origin = System.out;
-//        PrintStream printStream = new PrintStream(new FileOutputStream("src/parser/LRTable.txt"));
-//        System.setOut(printStream);
-//
-//        int len = 0;
-//        for (Production production : parser.productions) {
-//            if (len < production.toString().length())
-//                len = production.toString().length();
-//        }
-//        for (int i = 0; i < parser.lrTable.length; i++) {
-//            String[] row = parser.lrTable[i];
-//            for (String s : row) System.out.format("%-" + (len + 2) + "s", s);
-//            System.out.println();
-//        }
-//        System.setOut(origin);
-
-//        TextTable textTable = new TextTable(parser.lrTable[0], Arrays.copyOfRange(parser.lrTable, 1, parser.lrTable.length));
-//        textTable.printTable();
-
         List<Production> productions = parser.reduce(tokens);
         for (Production production : productions)
             System.out.println(production);
