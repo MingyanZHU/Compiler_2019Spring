@@ -46,7 +46,7 @@ public class Item {
         if (o == null || getClass() != o.getClass()) return false;
         Item item = (Item) o;
         if (this.getRight().length == 1 && item.getRight().length == 1 &&
-                this.getRight()[0].equals(Utils.EMPTY_STRING_CHARACTER) && item.getRight()[0].equals(Utils.EMPTY_STRING_CHARACTER))
+                this.getRight()[0].equals(Parser.EMPTY_STRING_CHARACTER) && item.getRight()[0].equals(Parser.EMPTY_STRING_CHARACTER))
             return Objects.equals(left, item.left) &&
                     Objects.equals(search, item.search);
 

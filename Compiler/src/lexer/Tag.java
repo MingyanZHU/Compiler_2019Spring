@@ -1,6 +1,6 @@
 package lexer;
 
-import parser.Utils;
+import parser.Parser;
 
 public enum Tag {
     INT("int"), FLOAT("float"), BOOL("bool"), CHAR("char"), RECORD("record"), IF("if"),
@@ -12,7 +12,7 @@ public enum Tag {
     NUM("num"), // integer number
     ID("id"),  // identifier
     STRING("string"),
-    STACK_BOTTOM(Utils.STACK_BOTTOM_CHARACTER),
+    STACK_BOTTOM(Parser.STACK_BOTTOM_CHARACTER),
     PROC("proc"), CALL("call"),
     NULL("null");
 

@@ -1,27 +1,30 @@
 package parser;
 
+import GUI.Controller;
+import dnl.utils.text.table.TextTable;
 import lexer.Lexer;
 import lexer.Tag;
 import lexer.Token;
 
 import java.io.*;
 import java.util.*;
-// TODO 重构此部分代码
-public class Utils {
+
+// TODO 增加对错误信息的处理
+public class Parser {
     public static final String START_STATE = "Start";
+    public static final String ACCEPT_STRING = "acc";
     public static final String STACK_BOTTOM_CHARACTER = "#";
     public static final String EMPTY_STRING_CHARACTER = "ε";
-//    public static final Item START_ITEM = new Item()
+    public static final String PRODUCTION_DELIMITER = "丨";
+    public static final String REDUCTION_SYMBOL = "->";
 
     private Map<String, Set<String>> first = new HashMap<>();
     private final Map<String, Set<String>> follow = new HashMap<>();
-    //    private final Map<String, List<String>> production = new HashMap<>();
     private final Set<Production> productions = new HashSet<>();
     private final Set<String> nonTerminators = new HashSet<>();
     private final Set<String> terminators = new HashSet<>();
     private final Set<String> canLeadNullSet = new HashSet<>();
     private String grammarPath;
-    private BufferedReader bufferedReader;
 
     private Set<ItemSet> itemSets = new HashSet<>();
     private Map<Integer, Map<String, Integer>> gotoTable = new HashMap<>();
@@ -29,28 +32,25 @@ public class Utils {
     private List<String> lrTableHead;
     private Set<String> synchronizingTokens = new HashSet<>(Arrays.asList(Tag.SEMICOLON.getValue(), Tag.RP.getValue()));
 
+    private final List<String> errorMessages = new ArrayList<>();
 
-    public Utils(String grammarPath) {
+
+    public Parser(String grammarPath) throws IOException {
         this.grammarPath = grammarPath;
-        try {
-            bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(grammarPath)));
-            String string = "";
-            while ((string = bufferedReader.readLine()) != null) {
-                if (string.length() == 0)
-                    continue;
-                String[] ss = string.split("->");
-                String left = ss[0].trim();
-                // 文法分割符为汉字 丨
-                String[] productionList = ss[1].split("丨");
-//                production.put(ss[0].trim(), productionList);
-                for (String production : productionList) {
-                    production = production.charAt(0) == ' ' ? production.substring(1) : production;
-                    productions.add(new Production(left, production.split(" ")));
-                }
-                nonTerminators.add(left);
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(grammarPath)));
+        String string;
+        while ((string = bufferedReader.readLine()) != null) {
+            if (string.length() == 0)
+                continue;
+            String[] ss = string.split(REDUCTION_SYMBOL);
+            String left = ss[0].trim();
+            // 文法分割符为汉字 丨
+            String[] productionList = ss[1].split(PRODUCTION_DELIMITER);
+            for (String production : productionList) {
+                production = production.charAt(0) == ' ' ? production.substring(1) : production;
+                productions.add(new Production(left, production.split(" ")));
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+            nonTerminators.add(left);
         }
 
         for (Production production : productions) {
@@ -62,7 +62,6 @@ public class Utils {
             }
         }
         terminators.add(STACK_BOTTOM_CHARACTER);   // 栈底符号
-//        nonTerminators.addAll(production.keySet());
         getFirst();
         // TODO 认为输入的文法已经是拓广文法 且Start为文法的开始符号
 
@@ -84,7 +83,7 @@ public class Utils {
             for (String key : nonTerminators) {
                 for (Production production : productions) {
                     if (production.getLeft().equals(key)) {
-                        String rightFirstItem = "";
+                        String rightFirstItem;
                         if (step == 1)
                             rightFirstItem = production.getRight().get(0);
                         else {
@@ -102,14 +101,6 @@ public class Utils {
                             tempFirst.get(key).add(rightFirstItem);
                     }
                 }
-//                for (String right : production.get(key)) {
-//                    right = right.length() == 1 ? right : right.charAt(0) == ' ' ? right.substring(1) : right;
-//                    String firstItem = right.split(" ")[0];
-//                    if (nonTerminators.contains(firstItem))
-//                        tempFirst.get(key).addAll(first.get(firstItem));
-//                    else
-//                        tempFirst.get(key).add(firstItem);
-//                }
             }
             for (String key : nonTerminators) {
                 boolean t1 = first.get(key).containsAll(tempFirst.get(key));
@@ -140,20 +131,16 @@ public class Utils {
         return deepCopyMap(first);
     }
 
+    public List<String> getErrorMessages() {
+        return errorMessages;
+    }
+
     private static Map<String, Set<String>> deepCopyMap(Map<String, Set<String>> origin) {
         Map<String, Set<String>> answer = new HashMap<>();
         for (Map.Entry<String, Set<String>> entry : origin.entrySet()) {
             answer.put(entry.getKey(), new HashSet<>(entry.getValue()));
         }
         return answer;
-    }
-
-    private boolean isTerminator(String test) {
-        return !nonTerminators.contains(test);
-    }
-
-    private boolean isNonTerminator(String test) {
-        return nonTerminators.contains(test);
     }
 
     private boolean canLeadNull(String rightString) {
@@ -192,11 +179,9 @@ public class Utils {
 
     private Set<String> getFirstFromString(List<String> list) {
         Set<String> ans = new HashSet<>();
-//        for(int i = 0;i<list.size();i++){
         String s = list.get(0);
         if (nonTerminators.contains(s) && !canLeadNullSet.contains(s)) {
             ans.addAll(first.get(s));
-//                break;
         } else if (nonTerminators.contains(s) && canLeadNullSet.contains(s)) {
             for (String string : first.get(s)) {
                 if (!string.equals(EMPTY_STRING_CHARACTER)) {
@@ -204,24 +189,8 @@ public class Utils {
                 }
             }
             ans.addAll(getFirstFromString(list.subList(1, list.size())));
-//                break;
         } else {
             ans.add(s);
-//                break;
-//        }
-//        for (String s : list) {
-//            if (nonTerminators.contains(s) && !canLeadNullSet.contains(s)) {
-//                ans.addAll(first.get(s));
-//                break;
-//            } else if (nonTerminators.contains(s) && canLeadNullSet.contains(s)){
-//                for(String string:first.get(s)){
-//                    if(!string.equals(EMPTY_STRING_CHARACTER)){
-//                        ans.add(string);
-//                    }
-//                }
-//                ans.addAll(getFirstFromString(first.))
-//                break;
-//            }
         }
         return ans;
     }
@@ -290,7 +259,6 @@ public class Utils {
         Set<String> characters = new HashSet<>(nonTerminators);
         characters.addAll(terminators);
 
-        ItemSet debug = null;
         while (true) {
             for (ItemSet itemSet : itemSets) {
                 for (String s : characters) {
@@ -315,20 +283,6 @@ public class Utils {
                             addGOTOTable(itemSet.getIndex(), s, index);
                             index = index + 1;
                         }
-//                        if (itemSets.keySet().contains(temp)) {
-////                            index--;
-//                            itemSet.addGOTO(s, itemSets.get(temp));
-//                            addGOTOTable(itemSet.getIndex(), s, itemSets.get(temp));
-//                        } else {
-//                            tempItemSet.put(temp, index);
-//                            if(index == 163)
-//                                debug = temp;
-//                            itemSet.addGOTO(s, index);
-//                            addGOTOTable(itemSet.getIndex(), s, index);
-//                            index = index + 1;
-//                        }
-//                        !itemSets.contains(new ItemSet(gotoSetItem, index))
-//                        tempItemSet.add(new ItemSet(gotoSetItem, index++));
                     }
                 }
             }
@@ -341,20 +295,6 @@ public class Utils {
                 }
             }
         }
-//        List<Integer> list = new ArrayList<>(itemSets.values());
-//        for(ItemSet itemSet : itemSets.keySet()){
-//            list.add(itemSet.getIndex());
-//        }
-//        Collections.sort(list);
-//        int j = 0;
-//        for (int i = 0; i < itemSets.size(); i++) {
-//            if (i != list.get(j)) {
-//                System.err.println(i);
-//                j--;
-//            }
-//            j++;
-//        }
-
         fillLrTable();
     }
 
@@ -385,10 +325,12 @@ public class Utils {
                 if (item.equals(startItem)) {
                     int j = characters.indexOf(STACK_BOTTOM_CHARACTER) + 1;
                     if (lrTable[index][j].length() != 0) {
-                        System.err.println("" + index + ", " + j + " " + lrTable[index][j]);
-                        lrTable[index][j] += "acc";
+                        String errorMessage = "" + index + ", " + j + " " + lrTable[index][j];
+                        System.err.println(errorMessage);
+                        errorMessages.add(errorMessage);
+                        lrTable[index][j] += ACCEPT_STRING;
                     } else {
-                        lrTable[index][j] = "acc";
+                        lrTable[index][j] = ACCEPT_STRING;
                     }
                     continue;
                 }
@@ -396,7 +338,9 @@ public class Utils {
                         (item.getStatus() == item.getRight().length) || (item.getRight().length == 1 && item.getRight()[0].equals(EMPTY_STRING_CHARACTER))) {
                     int j = characters.indexOf(item.getSearch()) + 1;
                     if (lrTable[index][j].length() != 0) {
-                        System.err.println("" + index + ", " + j + " " + lrTable[index][j]);
+                        String errorMessage = "" + index + ", " + j + " " + lrTable[index][j];
+                        System.err.println(errorMessage);
+                        errorMessages.add(errorMessage);
                         lrTable[index][j] += "r(" + new Production(item.getLeft(), item.getRight()).toString() + ")";
                     } else {
                         lrTable[index][j] = "r(" + new Production(item.getLeft(), item.getRight()).toString() + ")";
@@ -408,28 +352,21 @@ public class Utils {
 
                     if (terminators.contains(entry.getKey())) {
                         if (!lrTable[index][j].equals("s" + entry.getValue()) && lrTable[index][j].length() != 0) {
-                            System.err.println("" + index + ", " + j + " " + lrTable[index][j]);
+                            String errorMessage = "" + index + ", " + j + " " + lrTable[index][j];
+                            System.err.println(errorMessage);
+                            errorMessages.add(errorMessage);
                         }
                         lrTable[index][characters.indexOf(entry.getKey()) + 1] = "s" + entry.getValue();
                     } else {
                         if (!lrTable[index][j].equals("" + entry.getValue()) && lrTable[index][j].length() != 0) {
-                            System.err.println("" + index + ", " + j + " " + lrTable[index][j]);
+                            String errorMessage = "" + index + ", " + j + " " + lrTable[index][j];
+                            System.err.println(errorMessage);
+                            errorMessages.add(errorMessage);
                         }
                         lrTable[index][characters.indexOf(entry.getKey()) + 1] = "" + entry.getValue();
                     }
                 }
             }
-//            if (itemSet.getItemSet().contains(startItem)) {
-//                lrTable[itemSet.getIndex()][characters.indexOf(STACK_BOTTOM_CHARACTER)] = "acc";
-//                continue;
-//            }
-//            for (Map.Entry<String, Integer> entry : itemSet.getGotoTable().entrySet()) {
-//                if (terminators.contains(entry.getKey())) {
-//                    lrTable[itemSet.getIndex()][characters.indexOf(entry.getKey())] = "S" + entry.getValue();
-//                } else {
-//                    lrTable[itemSet.getIndex()][characters.indexOf(entry.getKey())] = "" + entry.getValue();
-//                }
-//            }
         }
     }
 
@@ -444,39 +381,6 @@ public class Utils {
 
     public List<Production> reduce(List<Token> tokens) {
         List<Production> ans = new ArrayList<>();
-//        Stack<Integer> state = new Stack<>();
-//        state.push(0);
-//        Queue<String> input = new LinkedList<>();
-//        for (String token : tokens) {
-//            input.add(token);
-//        }
-//        String a = input.poll();
-//        int s;
-//        while (true) {
-//            s = state.peek() + 1;
-//            int aIndex = lrTableHead.indexOf(a) + 1;
-//            if (lrTable[s][aIndex].length() == 0) {
-//                System.err.println("State " + s + ", stack top " + a);
-//                break;
-//            } else if (lrTable[s][aIndex].charAt(0) == 's') {
-//                state.push(Integer.parseInt(lrTable[s][aIndex].substring(1)));
-//                a = input.poll();
-//            } else if (lrTable[s][aIndex].charAt(0) == 'r') {
-//                Production nextProduction = getProductionFromLRTable(lrTable[s][aIndex]);
-//                ans.add(nextProduction);
-//                for (int i = 0; i < nextProduction.getRight().size(); i++)
-//                    state.pop();
-//                int t = state.peek() + 1;
-//                String left = nextProduction.getLeft();
-//                int leftIndex = lrTableHead.indexOf(left);
-//                state.push(Integer.parseInt(lrTable[t][leftIndex]));
-//            } else if (lrTable[s][aIndex].equals("acc")) {
-//                break;
-//            } else {
-//                System.err.println("State " + s + ", stack top " + a);
-//                break;
-//            }
-//        }
         Stack<Integer> stateStack = new Stack<>();
         Stack<String> symbolStack = new Stack<>();
         stateStack.push(0);
@@ -491,8 +395,10 @@ public class Utils {
             int aIndex = lrTableHead.indexOf(currentSymbol) + 1;
             boolean errorOccurred = false;
             if (lrTable[currentState][aIndex].length() == 0) {
-                System.err.println("Error at line[" + tokens.get(status).getLine() + "]\tState "
-                        + currentState + ", stack top " + currentSymbol);
+                String errorMessage = "Error at line[" + tokens.get(status).getLine() + "]\tState "
+                        + currentState + ", stack top " + currentSymbol;
+                System.err.println(errorMessage);
+                errorMessages.add(errorMessage);
                 errorOccurred = true;
             } else if (lrTable[currentState][aIndex].charAt(0) == 's') {
                 // 移入
@@ -511,11 +417,13 @@ public class Utils {
                 symbolStack.push(currentReduceProduction.getLeft());
                 stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
                 ans.add(currentReduceProduction);
-            } else if (lrTable[currentState][aIndex].equals("acc")) {
+            } else if (lrTable[currentState][aIndex].equals(ACCEPT_STRING)) {
                 break;
             } else {
-                System.err.println("Error at line[" + tokens.get(status).getLine() + "]\tState "
-                        + currentState + ", stack top " + currentSymbol);
+                String errorMessage = "Error at line[" + tokens.get(status).getLine() + "]\tState "
+                        + currentState + ", stack top " + currentSymbol;
+                System.err.println(errorMessage);
+                errorMessages.add(errorMessage);
                 errorOccurred = true;
             }
 
@@ -534,13 +442,45 @@ public class Utils {
     }
 
     private Production getProductionFromLRTable(String reduce) {
-        String[] strings = reduce.substring(2, reduce.length() - 1).split("->");
+        String[] strings = reduce.substring(2, reduce.length() - 1).split(REDUCTION_SYMBOL);
         String left = strings[0].trim();
         String right = strings[1].charAt(0) == ' ' ? strings[1].substring(1) : strings[1];
         return new Production(left, right.split(" "));
     }
 
-    public static void main(String[] args) throws FileNotFoundException {
+    public void outputLRTableToFile() throws IOException {
+        outputLRTableToFile(Controller.lrTablePath);
+    }
+
+    public void outputLRTableToFile(String lrTableFilePath) throws IOException {
+        Controller.lrTablePath = lrTableFilePath;
+        PrintStream origin = System.out;
+        PrintStream printStream = new PrintStream(new FileOutputStream(lrTableFilePath));
+        System.setOut(printStream);
+        TextTable textTable = new TextTable(lrTable[0], Arrays.copyOfRange(lrTable, 1, lrTable.length));
+        textTable.printTable();
+        System.setOut(origin);
+//        BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(lrTableFilePath)));
+//
+//        StringBuilder out = new StringBuilder();
+//        int len = 0;
+//        for (Production production : productions) {
+//            if (len < production.toString().length())
+//                len = production.toString().length();
+//        }
+//        for (String[] row : lrTable) {
+//            for (String s : row) {
+//                String string = String.format("%-" + (len + 2) + "s", s);
+//                out.append(string);
+//            }
+//            out.append("\n");
+//        }
+//        bufferedWriter.write(out.toString());
+//        bufferedWriter.close();
+    }
+
+
+    public static void main(String[] args) throws IOException {
         Lexer lexer = new Lexer("src/lexer/program/test.c");
         List<Token> tokens = lexer.getTokens();
         tokens.add(new Token(Tag.STACK_BOTTOM, lexer.getLines()));
@@ -561,13 +501,13 @@ public class Utils {
 //        for (String token : tokenInput)
 //            System.out.println(token);
         String path = "src/parser/testParserFirst.txt";
-        Utils utils = new Utils(path);
-//        for (String non : utils.nonTerminators) {
+        Parser parser = new Parser(path);
+//        for (String non : parser.nonTerminators) {
 //            System.out.println(non);
 //        }
 //        System.out.println("///////////////");
-//        Map<String, Set<String>> ans = utils.getNonTerminatorsFirst();
-//        for (String ter : utils.terminators) {
+//        Map<String, Set<String>> ans = parser.getNonTerminatorsFirst();
+//        for (String ter : parser.terminators) {
 //            System.out.println(ter);
 //        }
 //        System.out.println("///////////////");
@@ -582,44 +522,47 @@ public class Utils {
 //        }
 //        Item startItem = new Item("C", new String[]{"c", "C"}, 1, "c");
 //        Item item2 = new Item("C", new String[] {"c", "C"}, 1, "d");
-//        Set<Item> items = utils.goTo(utils.getClosure(new HashSet<>(Arrays.asList(startItem, item2))), "C");
-//        Set<Item> items = utils.getClosure(new HashSet<>(Collections.singletonList(new Item("Start", new String[]{"P"}, 0, "#"))));
+//        Set<Item> items = parser.goTo(parser.getClosure(new HashSet<>(Arrays.asList(startItem, item2))), "C");
+//        Set<Item> items = parser.getClosure(new HashSet<>(Collections.singletonList(new Item("Start", new String[]{"P"}, 0, "#"))));
 
-        utils.items(new Item(Utils.START_STATE, new String[]{"P"}, 0, Utils.STACK_BOTTOM_CHARACTER));
-        System.out.println(utils.itemSets.size());
-//        for (ItemSet itemSet : utils.itemSets) {
+        parser.items(new Item(Parser.START_STATE, new String[]{"P"}, 0, Parser.STACK_BOTTOM_CHARACTER));
+        System.out.println(parser.itemSets.size());
+//        for (ItemSet itemSet : parser.itemSets) {
 //            System.out.println(itemSet);
 //        }
-//        List<Integer> index = new ArrayList<>(utils.itemSets);
+//        List<Integer> index = new ArrayList<>(parser.itemSets);
 //        Collections.sort(index);
-//        for (int i = 0; i < utils.itemSets.size(); i++) {
+//        for (int i = 0; i < parser.itemSets.size(); i++) {
 //            if (i != index.get(i)) {
 //                System.err.println(i);
 //                break;
 //            }
 //        }
 //        StringBuilder format = new StringBuilder();
-//        for(int i = 0;i<utils.lrTable[0].length;i++){
+//        for(int i = 0;i<parser.lrTable[0].length;i++){
 //            format.append()
 //        }
 
-        PrintStream origin = System.out;
-        PrintStream printStream = new PrintStream(new FileOutputStream("src/parser/LRTable.txt"));
-        System.setOut(printStream);
+//        PrintStream origin = System.out;
+//        PrintStream printStream = new PrintStream(new FileOutputStream("src/parser/LRTable.txt"));
+//        System.setOut(printStream);
+//
+//        int len = 0;
+//        for (Production production : parser.productions) {
+//            if (len < production.toString().length())
+//                len = production.toString().length();
+//        }
+//        for (int i = 0; i < parser.lrTable.length; i++) {
+//            String[] row = parser.lrTable[i];
+//            for (String s : row) System.out.format("%-" + (len + 2) + "s", s);
+//            System.out.println();
+//        }
+//        System.setOut(origin);
 
-        int len = 0;
-        for (Production production : utils.productions) {
-            if (len < production.toString().length())
-                len = production.toString().length();
-        }
-        for (int i = 0; i < utils.lrTable.length; i++) {
-            String[] row = utils.lrTable[i];
-            for (String s : row) System.out.format("%-" + (len + 2) + "s", s);
-            System.out.println();
-        }
-        System.setOut(origin);
+//        TextTable textTable = new TextTable(parser.lrTable[0], Arrays.copyOfRange(parser.lrTable, 1, parser.lrTable.length));
+//        textTable.printTable();
 
-        List<Production> productions = utils.reduce(tokens);
+        List<Production> productions = parser.reduce(tokens);
         for (Production production : productions)
             System.out.println(production);
     }
