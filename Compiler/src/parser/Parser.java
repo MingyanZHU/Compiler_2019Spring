@@ -461,7 +461,7 @@ public class Parser {
                     if (foundA && lrTable[recoveryState][tokenIndex].length() > 0) {
                         foundErrorReason = true;
                         status--;
-                        errorMessage.append(", Error around ").append(tokens.get(status));
+                        errorMessage.append(", ").append(probableErrorMessage(currentSymbol, token));
                         if (errorStatus == status)
                             ++status;
                         else
@@ -499,6 +499,21 @@ public class Parser {
         String left = strings[0].trim();
         String right = strings[1].charAt(0) == ' ' ? strings[1].substring(1) : strings[1];
         return new Production(left, right.split(" "));
+    }
+
+    private String probableErrorMessage(String before, String after){
+        if(before.equals("(") && after.equals("id"))
+            return "Maybe missing a \")\"";
+        else if(before.equals("[") && after.equals("id"))
+            return "Maybe missing a \"]\"";
+        else if(Lexer.getKeywords().contains(before) && (after.equals("id") || after.equals("=")))
+            return "Maybe missing a \";\"";
+        else if(before.equals("{") && after.equals("id"))
+            return "Maybe missing a \"}\"";
+        else if((Lexer.getKeywords().contains(before) || before.equals("id") && (Lexer.getKeywords().contains(after) || after.equals("id"))))
+            return "Maybe missing a delimiter";
+        else
+            return "Error around " + before + " and " + after;
     }
 
     public void outputLRTableToFile() throws IOException {

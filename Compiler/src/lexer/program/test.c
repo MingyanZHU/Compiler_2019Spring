@@ -29,4 +29,5 @@ call function(a, d);
 /*record stu {
     int z = 1;
 }*/
-int xx = 1;
+int xx
+int yy;

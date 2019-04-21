@@ -341,6 +341,10 @@ public class Lexer {
         return lines;
     }
 
+    public static Set<String> getKeywords() {
+        return keywords;
+    }
+
     public static void main(String[] args) {
         Lexer lexer = new Lexer("src/lexer/program/test.c");
     }
