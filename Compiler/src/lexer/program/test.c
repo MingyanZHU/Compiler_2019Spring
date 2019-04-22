@@ -26,8 +26,8 @@ proc int function(int x, int y){
 }
 
 call function(a, d);
-/*record stu {
+record stu {
     int z = 1;
-}*/
+}
 int xx
 int yy;

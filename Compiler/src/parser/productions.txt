@@ -1,0 +1,157 @@
+Error at line[33], Maybe missing a ";"
+X -> int
+C -> ε
+T -> X C
+F -> num
+A -> ε
+A -> = F A
+D -> T id A ;
+L -> id
+F -> id
+G -> F
+E -> G
+F -> id
+G -> F
+E -> E + G
+MachedS -> L = E ;
+S -> MachedS
+X -> int
+C -> ε
+C -> [ num ] C
+C -> [ num ] C
+T -> X C
+A -> ε
+D -> T id A ;
+L -> id
+F -> id
+G -> F
+E -> G
+MachedS -> L = E ;
+S -> MachedS
+X -> int
+C -> ε
+T -> X C
+F -> num
+A -> ε
+A -> = F A
+D -> T id A ;
+F -> id
+G -> F
+E -> G
+Relop -> ==
+F -> id
+G -> F
+E -> G
+I -> E Relop E
+H -> I
+B -> H
+L -> id
+F -> num
+G -> F
+E -> G
+MachedS -> L = E ;
+L -> id
+F -> num
+G -> F
+E -> G
+MachedS -> L = E ;
+MachedS -> if ( B ) MachedS else MachedS
+S -> MachedS
+L -> id
+F -> id
+G -> F
+E -> G
+F -> num
+G -> F
+E -> E + G
+MachedS -> L = E ;
+S -> MachedS
+F -> id
+G -> F
+E -> G
+Relop -> <
+F -> num
+G -> F
+E -> G
+I -> E Relop E
+H -> I
+B -> H
+MachedS -> do S while ( B ) ;
+S -> MachedS
+X -> float
+C -> ε
+T -> X C
+F -> real
+A -> ε
+A -> = F A
+D -> T id A ;
+X -> char
+C -> ε
+C -> [ num ] C
+T -> X C
+F -> string
+A -> ε
+A -> = F A
+D -> T id A ;
+X -> int
+X -> int
+M -> X id
+X -> int
+M -> M , X id
+L -> id
+F -> id
+G -> F
+E -> G
+F -> num
+G -> F
+E -> E + G
+MachedS -> L = E ;
+S -> MachedS
+F -> id
+G -> F
+E -> G
+MachedS -> return E ;
+S -> MachedS
+P -> ε
+P -> S P
+P -> S P
+D -> proc X id ( M ) { P }
+F -> id
+G -> F
+E -> G
+Elist -> E
+F -> id
+G -> F
+E -> G
+Elist -> Elist , E
+MachedS -> call id ( Elist ) ;
+S -> MachedS
+X -> int
+C -> ε
+T -> X C
+F -> num
+A -> ε
+A -> = F A
+D -> T id A ;
+P -> ε
+P -> D P
+D -> record id { P }
+X -> int
+C -> ε
+T -> X C
+A -> ε
+D -> T id A ;
+P -> ε
+P -> D P
+P -> D P
+P -> S P
+P -> D P
+P -> D P
+P -> D P
+P -> S P
+P -> S P
+P -> D P
+P -> S P
+P -> D P
+P -> S P
+P -> D P
