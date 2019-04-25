@@ -12,3 +12,43 @@
 - 不支持除过程之外的代码块，对于分支结构和循环结构的结构体均为单条语句，不支持大括号的代码块。
 - 不支持布尔量赋值，如`bool x = false;`。
 - 数组的声明方式奇怪，为`int [10] x;`。
+
+# `Grammar_Good.txt`文法的翻译方案
+Start -> P `{{ env = null; offsetStack = new Stack();}}`
+
+P -> PStart D P 丨 PStart S P 丨 ε
+
+PStart -> ε `{{ env = new Env(env); offsetStack.push(offset); offset=0;}}`
+
+D -> proc X id ( M ) { P } 丨 record id { P } 丨 T id A ; `{{enter
+(id.lexeme, T.type, offset);offset = offset + T.width;}}`
+
+A -> = F A 丨 , id A 丨 ε
+
+M -> M , X id 丨 X id
+
+T -> X `{{t = X.type; w = X.width;}}` C `{{T.type = C.type; T.width = C.width;}}`
+
+X -> int `{{X.type = interger; X.width = 4;}}`丨 float `{{X.type = float; X.width = 8;}}`丨 bool 丨 char
+
+C -> [ num ] C 丨 ε `{{C.type = t; C.width = w;}}`
+
+S -> L = E ; 丨 if ( B ) S else S 丨 do S while ( B ) 丨 call id ( Elist ) ; 丨 return E ; 丨 if ( B ) S
+
+L -> L [ num ] 丨 id
+
+E -> E + G 丨 G
+
+G -> G * F 丨 F
+
+F -> ( E ) 丨 num 丨 id 丨 real 丨 string
+
+B -> B || H 丨 H
+
+H -> H && I 丨 I
+
+I -> ! I 丨 ( B ) 丨 E Relop E 丨 true 丨 false
+
+Relop -> < 丨 <= 丨 > 丨 >= 丨 == 丨 !=
+
+Elist -> Elist , E 丨 E

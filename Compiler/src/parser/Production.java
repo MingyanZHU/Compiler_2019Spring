@@ -8,10 +8,16 @@ import java.util.Objects;
 public class Production {
     private final String left;
     private final List<String> right;
+    private final List<String> syntaxAction = new ArrayList<>();
 
     public Production(String left, String[] right) {
         this.left = left;
         this.right = new ArrayList<>(Arrays.asList(right));
+    }
+
+    public Production(String left, List<String> right) {
+        this.left = left;
+        this.right = new ArrayList<>(right);
     }
 
     private String[] toArray() {
@@ -40,6 +46,10 @@ public class Production {
 
     public List<String> getRight() {
         return right;
+    }
+
+    public void addSyntaxAction(String action) {
+        this.syntaxAction.add(action);
     }
 
     @Override

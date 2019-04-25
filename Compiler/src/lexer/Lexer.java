@@ -24,11 +24,8 @@ public class Lexer {
     private static final Set<String> logicalOp = new HashSet<>(Arrays.asList("&", "|", "||", "&&", "^", "!"));
     private static final Set<Character> arithmeticOp = new HashSet<>(Arrays.asList('+', '-', '*', '/', '%'));
 
-    private final SymbolBoard symbolBoard;  // TODO 本质上没有任何效果 所填符号表在语法和语义分析时需重写
-
     public Lexer(String path) {
         this.path = path;
-        this.symbolBoard = new SymbolBoard(null);
         try {
             this.bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(path)));
         } catch (IOException e) {
@@ -67,7 +64,6 @@ public class Lexer {
         if (keywords.contains(ans))
             return new Token(Tag.valueOf(ans.toUpperCase()), lines);
         else {
-            symbolBoard.putSymbolItem(ans, new SymbolItem(ans, Tag.ID, lines, -1));
             return new Word(Tag.ID, ans, lines);
         }
     }
@@ -314,8 +310,6 @@ public class Lexer {
 //        System.out.println("//////Token序列//////");
 //        for (Token token : tokens)
 //            System.out.println(token);
-//        System.out.println("//////符号表//////");
-//        System.out.println(symbolBoard);
     }
 
     public String getTokensList() {
