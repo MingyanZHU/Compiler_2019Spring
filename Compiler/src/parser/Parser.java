@@ -418,6 +418,10 @@ public class Parser {
         stateStack.push(0);
         symbolStack.push(new Symbol(STACK_BOTTOM_CHARACTER));
 
+        // 中间代码
+        List<InterCode> interCodeList = new ArrayList<>();
+        int nextInstr = 0;
+
         int status = 0;
         int errorStatus = status; // 用于避免出现死循环的错误处理 当任意状态处理连续处理两次 则跳过该状态
         int currentState;
@@ -427,6 +431,12 @@ public class Parser {
         // 用于语义动作
         String declarations_t = "";
         String declarations_w = "";
+
+        // 用于嵌套定义
+
+        // 用于语义分析的临时变量
+        String temp = "t";
+        int countTemp = 1;
 
         while (true) {
             currentState = stateStack.peek() + 1;
@@ -439,10 +449,11 @@ public class Parser {
             }
 
             int aIndex = lrTableHead.indexOf(currentSymbol) + 1;
-            boolean errorOccurred = false;
+            boolean syntaxErrorOccurred = false;
+            boolean semanticErrorOccurred = false;
             if (lrTable[currentState][aIndex].length() == 0) {
                 errorMessage.append("Error at line[").append(tokens.get(status).getLine()).append("]");
-                errorOccurred = true;
+                syntaxErrorOccurred = true;
             } else if (lrTable[currentState][aIndex].charAt(0) == 's') {
                 // 移入
                 stateStack.push(Integer.parseInt(lrTable[currentState][aIndex].substring(1)));
@@ -458,10 +469,11 @@ public class Parser {
                 }
                 symbolStack.push(symbol);
                 if (status >= tokens.size())
-                    errorOccurred = true;
+                    syntaxErrorOccurred = true;
             } else if (lrTable[currentState][aIndex].charAt(0) == 'r') {
                 // 规约
                 Production currentReduceProduction = getProductionFromLRTable(lrTable[currentState][aIndex]);
+                // 声明语句
                 // D -> T id A ;
                 if (currentReduceProduction.getLeft().equals("D") && currentReduceProduction.getRight().size() == 4) {
                     symbolStack.pop(); // pop ";"
@@ -472,13 +484,18 @@ public class Parser {
                     stateStack.pop();
                     Symbol T = symbolStack.pop();
                     stateStack.pop();
-                    table.putSymbolItem(id.getAttribute("lexeme"), new SymbolItem(id.getAttribute("lexeme"), T.getAttribute("type"), Integer.parseInt(id.getAttribute("line")), offset));
-                    offset += Integer.parseInt(T.getAttribute("width"));
+                    String p = lookUpSymbolTable(id.getAttribute("lexeme"));
+                    if (p == null) {
+                        table.putSymbolItem(id.getAttribute("lexeme"), new SymbolItem(id.getAttribute("lexeme"), T.getAttribute("type"), Integer.parseInt(id.getAttribute("line")), offset));
+                        offset += Integer.parseInt(T.getAttribute("width"));
+                    } else {
+                        semanticErrorOccurred = true;
+                        errorMessage.append("Error at line[").append(id.getAttribute("line")).append("], ").append(id.getAttribute("lexeme")).append(" is defined early.");
+                    }
                     Symbol symbol = new Symbol(currentReduceProduction.getLeft());
                     symbolStack.push(symbol);
                     stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
                     ans.add(currentReduceProduction);
-                    continue;
                 }
                 // T -> X C
                 else if (currentReduceProduction.getLeft().equals("T")) {
@@ -492,7 +509,6 @@ public class Parser {
                     symbolStack.push(T);
                     stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
                     ans.add(currentReduceProduction);
-                    continue;
                 }
                 // X -> int
                 else if (currentReduceProduction.getLeft().equals("X") && currentReduceProduction.getRight().size() == 1 && currentReduceProduction.getRight().get(0).equals("int")) {
@@ -504,7 +520,6 @@ public class Parser {
                     symbolStack.push(X);
                     stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
                     ans.add(currentReduceProduction);
-                    continue;
                 }
                 // X -> float
                 else if (currentReduceProduction.getLeft().equals("X") && currentReduceProduction.getRight().size() == 1 && currentReduceProduction.getRight().get(0).equals("float")) {
@@ -516,7 +531,6 @@ public class Parser {
                     symbolStack.push(X);
                     stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
                     ans.add(currentReduceProduction);
-                    continue;
                 }
                 // C -> ε
                 else if (currentReduceProduction.getLeft().equals("C") && currentReduceProduction.getRight().size() == 1 && currentReduceProduction.getRight().get(0).equals(EMPTY_STRING_CHARACTER)) {
@@ -526,10 +540,9 @@ public class Parser {
                     symbolStack.push(C);
                     stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
                     ans.add(currentReduceProduction);
-                    continue;
                 }
                 // C -> [ num ] C
-                else if (currentReduceProduction.getLeft().equals("C") && currentReduceProduction.getRight().size() == 4){
+                else if (currentReduceProduction.getLeft().equals("C") && currentReduceProduction.getRight().size() == 4) {
                     Symbol C1 = symbolStack.pop();
                     stateStack.pop();
                     symbolStack.pop(); // "]"
@@ -550,25 +563,321 @@ public class Parser {
                     symbolStack.push(C);
                     stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
                     ans.add(currentReduceProduction);
-                    continue;
                 }
-                int rightSize = currentReduceProduction.getRight().size() == 1 && currentReduceProduction.getRight().get(0).equals(EMPTY_STRING_CHARACTER) ? 0 : currentReduceProduction.getRight().size();
-                for (int i = 0; i < rightSize; i++) {
+                // 赋值语句
+                // S -> id = E ;
+                else if (currentReduceProduction.getLeft().equals("S") && currentReduceProduction.getRight().size() == 4 && currentReduceProduction.getRight().get(0).equals("id")) {
+                    symbolStack.pop(); // ";"
                     stateStack.pop();
-                    symbolStack.pop();
+                    Symbol E = symbolStack.pop();
+                    stateStack.pop();
+                    symbolStack.pop();  // "="
+                    stateStack.pop();
+                    Symbol id = symbolStack.pop();
+                    stateStack.pop();
+
+                    String p = lookUpSymbolTable(id.getAttribute("lexeme"));
+                    if (p == null) {
+                        semanticErrorOccurred = true;    // 使用未定义的标识符
+                        errorMessage.append("Error at line[").append(id.getAttribute("line")).append("], ").append(id.getAttribute("lexeme")).append(" not defined");
+                    } else {
+                        InterCode interCode = new InterCode(new String[]{p, "=", E.getAttribute("addr")});
+                        interCodeList.add(interCode);
+                        nextInstr++;
+                    }
+                    symbolStack.push(new Symbol("S"));
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
                 }
-                Symbol symbol = new Symbol(currentReduceProduction.getLeft());
-                symbolStack.push(symbol);
-                stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
-                ans.add(currentReduceProduction);
+                // E -> E + G
+                else if (currentReduceProduction.getLeft().equals("E") && currentReduceProduction.getRight().size() == 3 && currentReduceProduction.getRight().get(2).equals("G")) {
+                    Symbol G = symbolStack.pop();
+                    stateStack.pop();
+                    symbolStack.pop();  // "+"
+                    stateStack.pop();
+                    Symbol E1 = symbolStack.pop();
+                    stateStack.pop();
+
+                    Symbol E = new Symbol("E");
+                    E.addAttribute("addr", temp + countTemp);
+                    countTemp++;
+                    InterCode interCode = new InterCode(new String[]{E.getAttribute("addr"), "=", E1.getAttribute("addr"), "+", G.getAttribute("addr")});
+                    interCodeList.add(interCode);
+                    nextInstr++;
+                    symbolStack.push(E);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+                // E -> G
+                else if (currentReduceProduction.getLeft().equals("E") && currentReduceProduction.getRight().size() == 1 && currentReduceProduction.getRight().get(0).equals("G")) {
+                    Symbol G = symbolStack.pop();
+                    stateStack.pop();
+                    Symbol E = new Symbol("E");
+                    E.addAttribute("addr", G.getAttribute("addr"));
+                    symbolStack.push(E);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+                // G -> G * F
+                else if (currentReduceProduction.getLeft().equals("G") && currentReduceProduction.getRight().size() == 3) {
+                    Symbol F = symbolStack.pop();
+                    stateStack.pop();
+                    symbolStack.pop();  // "*"
+                    stateStack.pop();
+                    Symbol G1 = symbolStack.pop();
+                    stateStack.pop();
+
+                    Symbol G = new Symbol("G");
+                    G.addAttribute("addr", temp + countTemp);
+                    countTemp++;
+                    InterCode interCode = new InterCode(new String[]{G.getAttribute("addr"), "=", G1.getAttribute("addr"), "+", F.getAttribute("addr")});
+                    interCodeList.add(interCode);
+                    nextInstr++;
+                    symbolStack.push(G);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+                // G -> F
+                else if (currentReduceProduction.getLeft().equals("G") && currentReduceProduction.getRight().size() == 1) {
+                    Symbol F = symbolStack.pop();
+                    stateStack.pop();
+                    Symbol G = new Symbol("G");
+                    G.addAttribute("addr", F.getAttribute("addr"));
+                    symbolStack.push(G);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+                // F -> ( E )
+                else if (currentReduceProduction.getLeft().equals("F") && currentReduceProduction.getRight().size() == 3) {
+                    symbolStack.pop(); // "("
+                    stateStack.pop();
+                    Symbol E = symbolStack.pop();
+                    stateStack.pop();
+                    symbolStack.pop(); // ")"
+                    stateStack.pop();
+                    Symbol F = new Symbol("F");
+                    F.addAttribute("addr", E.getAttribute("addr"));
+                    symbolStack.push(F);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+                // F -> id
+                else if (currentReduceProduction.getLeft().equals("F") && currentReduceProduction.getRight().size() == 1 && currentReduceProduction.getRight().get(0).equals("id")) {
+                    Symbol id = symbolStack.pop();
+                    stateStack.pop();
+                    String p = lookUpSymbolTable(id.getAttribute("lexeme"));
+                    Symbol F = new Symbol("F");
+                    F.addAttribute("addr", p);
+                    if (p == null) {
+                        semanticErrorOccurred = true;
+                        errorMessage.append("Error at line[").append(id.getAttribute("line")).append("], ").append(id.getAttribute("lexeme")).append(" not defined");
+                    }
+                    symbolStack.push(F);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+                // F -> num
+                else if (currentReduceProduction.getLeft().equals("F") && currentReduceProduction.getRight().size() == 1 && (currentReduceProduction.getRight().get(0).equals("num") || currentReduceProduction.getRight().get(0).equals("real"))) {
+                    Symbol number = symbolStack.pop();
+                    stateStack.pop();
+                    Symbol F = new Symbol("F");
+                    F.addAttribute("addr", number.getAttribute("value"));
+                    symbolStack.push(F);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+                // I -> false
+                else if (currentReduceProduction.getLeft().equals("I") && currentReduceProduction.getRight().size() == 1 && currentReduceProduction.getRight().get(0).equals("false")) {
+                    symbolStack.pop();  // pop false
+                    stateStack.pop();
+                    Symbol I = new Symbol("I");
+//                    I.addAttribute("falseList", nextInstr + "");
+                    I.makeList(nextInstr, false);
+                    InterCode interCode = new InterCode(new String[]{"goto"});
+                    interCodeList.add(interCode);
+                    nextInstr++;
+                    symbolStack.push(I);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+                // I -> true
+                else if (currentReduceProduction.getLeft().equals("I") && currentReduceProduction.getRight().size() == 1 && currentReduceProduction.getRight().get(0).equals("true")) {
+                    symbolStack.pop(); // pop true
+                    stateStack.pop();
+                    Symbol I = new Symbol("I");
+//                    I.addAttribute("trueList", nextInstr + "");
+                    I.makeList(nextInstr, true);
+                    InterCode interCode = new InterCode(new String[]{"goto"});
+                    interCodeList.add(interCode);
+                    nextInstr++;
+                    symbolStack.push(I);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+                // I -> E Relop E
+                else if (currentReduceProduction.getLeft().equals("I") && currentReduceProduction.getRight().size() == 3 && currentReduceProduction.getRight().get(0).equals("E")) {
+                    Symbol E1 = symbolStack.pop();
+                    stateStack.pop();
+                    Symbol Relop = symbolStack.pop();
+                    stateStack.pop();
+                    Symbol E2 = symbolStack.pop();
+                    stateStack.pop();
+
+                    Symbol I = new Symbol("I");
+                    I.makeList(nextInstr, true);
+                    I.makeList(nextInstr + 1, false);
+//                    I.addAttribute("trueList", nextInstr + "");
+//                    I.addAttribute("falseList", (nextInstr + 1) + "");
+                    InterCode interCode1 = new InterCode(new String[]{"if", E1.getAttribute("addr"), Relop.getAttribute("op"), E2.getAttribute("addr"), "goto"});
+                    InterCode interCode2 = new InterCode(new String[]{"goto"});
+                    interCodeList.add(interCode1);
+                    interCodeList.add(interCode2);
+                    nextInstr = nextInstr + 2;
+                    symbolStack.push(I);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+                // I -> ( B )
+                else if (currentReduceProduction.getLeft().equals("I") && currentReduceProduction.getRight().size() == 3 && currentReduceProduction.getRight().get(0).equals("(")) {
+                    symbolStack.pop();  // "("
+                    stateStack.pop();
+                    Symbol B = symbolStack.pop();
+                    stateStack.pop();
+                    symbolStack.pop();  // ")"
+                    stateStack.pop();
+
+                    Symbol I = new Symbol("I");
+                    I.addList(B.getTrueList(), true);
+                    I.addList(B.getFalseList(), false);
+//                    I.addAttribute("trueList", B.getAttribute("trueList"));
+//                    I.addAttribute("falseList", B.getAttribute("falseList"));
+                    symbolStack.push(I);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+                // I -> ! I
+                else if (currentReduceProduction.getLeft().equals("I") && currentReduceProduction.getRight().size() == 2) {
+                    Symbol I1 = symbolStack.pop();
+                    stateStack.pop();
+                    symbolStack.pop();  // "!"
+                    stateStack.pop();
+
+                    Symbol I = new Symbol("I");
+                    I.addList(I1.getFalseList(), true);
+                    I.addList(I1.getTrueList(), false);
+//                    I.addAttribute("trueList", I1.getAttribute("trueList"));
+//                    I.addAttribute("falseList", I1.getAttribute("falseList"));
+                    symbolStack.push(I);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+                // Relop -> < | <= | > | >= | == | !=
+                else if (currentReduceProduction.getLeft().equals("Relop") && currentReduceProduction.getRight().size() == 1) {
+                    Symbol op = symbolStack.pop();
+                    stateStack.pop();
+
+                    Symbol Relop = new Symbol("Relop");
+                    Relop.addAttribute("op", op.getName());
+                    symbolStack.push(Relop);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+                // BM -> epsilon
+                else if (currentReduceProduction.getLeft().equals("BM")) {
+                    Symbol BM = new Symbol("BM");
+                    BM.addAttribute("instr", nextInstr + "");
+
+                    symbolStack.push(BM);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+                // H -> H && BM I
+                else if (currentReduceProduction.getLeft().equals("H") && currentReduceProduction.getRight().size() > 1) {
+                    Symbol I = symbolStack.pop();
+                    stateStack.pop();
+                    Symbol BM = symbolStack.pop();
+                    stateStack.pop();
+                    symbolStack.pop(); // &&
+                    stateStack.pop();
+                    Symbol H1 = symbolStack.pop();
+                    stateStack.pop();
+
+                    // backpatch
+                    for (int i : H1.getTrueList())
+                        interCodeList.get(i).backPatch(BM.getAttribute("instr"));
+
+                    Symbol H = new Symbol("H");
+                    H.addList(I.getTrueList(), true);
+                    H.merge(H1.getFalseList(), I.getFalseList(), false);
+                    symbolStack.push(H);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+                // H -> I
+                else if (currentReduceProduction.getLeft().equals("H") && currentReduceProduction.getRight().size() == 1) {
+                    Symbol I = symbolStack.pop();
+                    stateStack.pop();
+                    Symbol H = new Symbol("H");
+                    H.addList(I.getTrueList(), true);
+                    H.addList(I.getFalseList(), false);
+
+                    symbolStack.push(H);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+                // B -> B || BM H
+                else if (currentReduceProduction.getLeft().equals("B") && currentReduceProduction.getRight().size() > 1) {
+                    Symbol H = symbolStack.pop();
+                    stateStack.pop();
+                    Symbol BM = symbolStack.pop();
+                    stateStack.pop();
+                    symbolStack.pop();  // pop "||"
+                    stateStack.pop();
+                    Symbol B1 = symbolStack.pop();
+                    stateStack.pop();
+                    Symbol B = new Symbol("B");
+
+                    for (int i : B1.getFalseList())
+                        interCodeList.get(i).backPatch(BM.getAttribute("instr"));
+                    B.merge(B1.getTrueList(), H.getTrueList(), true);
+                    B.addList(H.getFalseList(), false);
+                    symbolStack.push(B);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+                // B -> H
+                else if (currentReduceProduction.getLeft().equals("B") && currentReduceProduction.getRight().size() == 1) {
+                    Symbol H = symbolStack.pop();
+                    stateStack.pop();
+
+                    Symbol B = new Symbol("B");
+                    B.addList(H.getFalseList(), false);
+                    B.addList(H.getTrueList(), true);
+                    symbolStack.push(B);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+
+                // without semantic action
+                else {
+                    int rightSize = currentReduceProduction.getRight().size() == 1 && currentReduceProduction.getRight().get(0).equals(EMPTY_STRING_CHARACTER) ? 0 : currentReduceProduction.getRight().size();
+                    for (int i = 0; i < rightSize; i++) {
+                        stateStack.pop();
+                        symbolStack.pop();
+                    }
+                    Symbol symbol = new Symbol(currentReduceProduction.getLeft());
+                    symbolStack.push(symbol);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
             } else if (lrTable[currentState][aIndex].equals(ACCEPT_STRING)) {
                 break;
             } else {
                 errorMessage.append("Error at line[").append(tokens.get(status).getLine()).append("]");
-                errorOccurred = true;
+                syntaxErrorOccurred = true;
             }
 
-            if (errorOccurred) {
+            if (syntaxErrorOccurred) {
                 String searchSymbol;
                 int recoveryState;
                 int searchSymbolIndex;
@@ -600,7 +909,7 @@ public class Parser {
                     if (foundA && lrTable[recoveryState][tokenIndex].length() > 0) {
                         foundErrorReason = true;
                         status--;
-                        errorMessage.append(", ").append(probableErrorMessage(currentSymbol, token));
+                        errorMessage.append(", ").append(probableSyntaxErrorMessage(currentSymbol, token));
                         if (errorStatus == status)
                             ++status;
                         else
@@ -629,7 +938,16 @@ public class Parser {
                 errorMessages.add(errorMessage.toString());
                 errorMessage = new StringBuilder();
             }
+
+            if (semanticErrorOccurred) {
+                System.err.println(errorMessage.toString());
+                errorMessages.add(errorMessage.toString());
+            }
         }
+        // TODO 表达式方向不对 M记录的位置不对
+        for(int i = 0;i<interCodeList.size();i++)
+            System.out.println((i+1) + " : " + interCodeList.get(i));
+
         return ans;
     }
 
@@ -640,7 +958,7 @@ public class Parser {
         return new Production(left, right.split(" "));
     }
 
-    private String probableErrorMessage(String before, String after) {
+    private String probableSyntaxErrorMessage(String before, String after) {
         if (before.equals("(") && after.equals("id"))
             return "Maybe missing a \")\"";
         else if (before.equals("[") && after.equals("id"))
@@ -653,6 +971,14 @@ public class Parser {
             return "Maybe missing a delimiter";
         else
             return "Error around " + before + " and " + after;
+    }
+
+    private String lookUpSymbolTable(String lexeme) {
+        for (SymbolBoard symbolBoard = table; symbolBoard != null; symbolBoard = symbolBoard.getPrev()) {
+            if (symbolBoard.getSymbolItem(lexeme) != null)
+                return lexeme;  // TODO 仅仅返回了该id对应的名字 而未真正返回地址
+        }
+        return null;
     }
 
     public void outputLRTableToFile() throws IOException {

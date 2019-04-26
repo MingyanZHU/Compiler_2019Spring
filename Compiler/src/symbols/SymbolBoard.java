@@ -24,6 +24,10 @@ public class SymbolBoard {
         return null;
     }
 
+    public SymbolBoard getPrev() {
+        return prev;
+    }
+
     @Override
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();

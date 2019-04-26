@@ -1,3 +1,4 @@
-int [10][20][30] a;
-float b;
-int c;
+int x;
+int y;
+if(x < 100 || x > 200 && x != y)
+    x = 10;

@@ -7,6 +7,7 @@ public enum Tag {
     ELSE("else"), DO("do"), WHILE("while"), BREAK("break"), CONTINUE("continue"), TRUE("true"), FALSE("false"), RETURN("return"),// keyword
     ADD("+"), SUB("-"), MUL("*"), DIV("/"), MOD("%"), // arithmetic op
     NE("!="), G(">"), GE(">="), L("<"), LE("<="), EQ("=="), // logical op
+    AND("&&"), OR("||"), NOT("!"),
     SLP("("), SRP(")"), LP("{"), RP("}"), MLP("["), MRP("]"), ASSIGN("="), SEMICOLON(";"), COMMA(","), // delimiters
     REAL("real"), // float number
     NUM("num"), // integer number
