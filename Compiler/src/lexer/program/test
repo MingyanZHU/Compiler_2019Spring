@@ -1,4 +1,4 @@
-int a;
+/*int a;
 int b;
 int c;
 int d;
@@ -7,5 +7,30 @@ int x;
 int y;
 int z;
 while (a < b)
-    if (c < d) x = y + z;
-a = b + c * (d + e);
+    if (c < d) x = y + z; else x = y * z;
+
+a = b + c * (d + e);*/
+
+proc int function(int a, int c){
+    a = c + 10;
+    int d;
+    return a;
+}
+
+int [2][3] a;
+int c;
+int i;
+int j;
+int d;
+float h;
+d = c + a[i][j];
+a[i][j] = c;
+
+d = h * c;
+
+c[1][2] = d;
+
+proc float function(float i){
+    i = i + 1;
+    return i;
+}

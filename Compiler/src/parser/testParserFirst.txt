@@ -1,6 +1,7 @@
 Start -> P
 P -> D P 丨 S P 丨 ε
-D -> proc X id ( M ) { P } 丨 record id { P } 丨 T id A ;
+D -> proc X id DM ( M ) { P } 丨 record id { P } 丨 T id A ;
+DM -> ε
 A -> = F A 丨 , id A 丨 ε
 M -> M , X id 丨 X id
 T -> X C

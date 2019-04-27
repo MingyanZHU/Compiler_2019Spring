@@ -1,33 +1,43 @@
-int a = 10;
-a = x + y;
-/*int a = x + 1;*/
-int [100][200] b;
-a = c;
-int d = 0;
-if (a == c)
-    d = 1;
-else
-    d = 2;
+int a;
+a = 1 + 2;
+int b;
+int c;
+c = 10;
+b = c + 1;
+int d;
+d = c * 2;
+int e;
+e = 0;
+int x;
+int y;
+y = 999;
+int z;
+z = 100;
+while (a < b)
+    if (c < d) x = y + z; else x = a + b;
 
-/***Hello world!
-Hello Java! **/
+a = b + c * (d + e);
 
-do
-   a = a + 1;
-while (a < 20);
-
-float f = 10.0;
-
-char [10] s = "Hello";
-
-proc int function(int x, int y){
-    y = x + 1;
-    return y;
+proc float function(float i){
+    i = i + 1;
+    return i;
 }
 
-call function(a, d);
-record stu {
-    int z = 1;
+int [2][3] list;
+int c;
+int i;
+int j;
+int d;
+float h;
+d = c + list[i][j];
+list[i][j] = c;
+
+d = h * c;
+
+c[1][2] = d;
+proc int function(int a, int c){
+    a = c + 10;
+    int d;
+    return a;
 }
-int xx
-int yy;
+

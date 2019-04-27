@@ -20,11 +20,13 @@ P -> PStart D P 丨 PStart S P 丨 ε
 
 PStart -> ε `{{ env = new Env(env); offsetStack.push(offset); offset=0;}}`
 
-D -> proc X id ( M ) { P } 丨 record id { P } 丨 T id A ; `{{enter(id.lexeme, T.type, offset);offset = offset + T.width;}}`
+D -> proc X id ( M ) DM { P } `{{pop(tableStack); pop(offset)}}` 丨 record id { P } 丨 T id A ; `{{enter(id.lexeme, T.type, offset);offset = offset + T.width;}}`
+
+DM -> ε `{{table = mkTable(top(tableStack)); push(table); push(offset); offset = 0;}}`
 
 A -> = F A 丨 , id A 丨 ε
 
-M -> M , X id 丨 X id
+M -> M , X id `{{enter(id.lexeme, X.type, offset); offset = offset + X.width; M.size = M1.size + 1;}}`丨 X id `{{enter(id.lexeme, X.type, offset); offset = offset + X.width; M.size = 1;}}`
 
 T -> X `{{t = X.type; w = X.width;}}` C `{{T.type = C.type; T.width = C.width;}}`
 
@@ -32,11 +34,11 @@ X -> int `{{X.type = interger; X.width = 4;}}`丨 float `{{X.type = float; X.wid
 
 C -> [ num ] C 丨 ε `{{C.type = t; C.width = w;}}`
 
-S -> id = E ; `{{S.nextList = null; p = loopUp(id.lexeme); if p == null then error else gen(p, '=', E.addr);}}`丨 if ( B ) BM S N else BM S `{{backpatch(B.trueList, BM1.instr); backpatch(B.falseList, BM2.instr); temp = merge(S1.nextList, N.nextList); S.nextList = merge(temp, S2.nextList); }}` 丨 while BM ( B ) BM S `{{backpatch(S1.nextList, BM1.instr); backpatch(B.trueList, BM2.instr); S.nextList = B.falseList; gen('goto', BM1.instr); }}` 丨 call id ( Elist ) ; 丨 return E ; 丨 if ( B ) BM S `{{backpatch(B.trueList, BM.instr); S.nextList = merge(B.falseList, S1.nextList); }}` 丨 L = E ;
+S -> id = E ; `{{S.nextList = null; p = loopUp(id.lexeme); if p == null then error else gen(p, '=', E.addr);}}`丨 if ( B ) BM S N else BM S `{{backpatch(B.trueList, BM1.instr); backpatch(B.falseList, BM2.instr); temp = merge(S1.nextList, N.nextList); S.nextList = merge(temp, S2.nextList); }}` 丨 while BM ( B ) BM S `{{backpatch(S1.nextList, BM1.instr); backpatch(B.trueList, BM2.instr); S.nextList = B.falseList; gen('goto', BM1.instr); }}` 丨 call id ( Elist ) ; 丨 return E ; 丨 if ( B ) BM S `{{backpatch(B.trueList, BM.instr); S.nextList = merge(B.falseList, S1.nextList); }}` 丨 L = E ; `{{gen(L.array, L.addr, '=', E.addr)}}`
 
 N -> ε `{{N.nextList = makeList(nextInstr); gen('goto'); }}`
 
-L -> L [ E ] 丨 id [ E ]
+L -> L [ E ] `{{L.array = L1.array; }}` 丨 id [ E ] `{{p = lookUp(id.lexeme); if p == null then error else L.array = p; L.type = id.type; L.addr = new Temp(); gen(L.addr, 'addr', E.addr, '*', L.width)}}`
 
 E -> E + G `{{E.addr = newTemp(); gen(E.addr, '=', E1.addr, '+', G.addr);}}`丨 G `{{E.addr = G.addr;}}`
 
@@ -54,4 +56,6 @@ BM -> ε
 
 Relop -> < 丨 <= 丨 > 丨 >= 丨 == 丨 != `{{Relop.op = op}}`
 
-Elist -> Elist , E 丨 E
+Elist -> Elist , E `{{Elist.size = Elist1.size + 1;}}` 丨 E `{{Elist.size = 1;}}`
+
+<!-- TODO 翻译方案不完整，需要根据代码进行补充 -->

@@ -1,18 +1,21 @@
 Start -> P
 P -> D P 丨 S P 丨 ε
-D -> proc X id ( M ) { P } 丨 record id { P } 丨 T id A ;
+D -> proc X id DM ( M ) { P } 丨 record id { P } 丨 T id A ;
+DM -> ε
 A -> = F A 丨 , id A 丨 ε
 M -> M , X id 丨 X id
 T -> X C
 X -> int 丨 float 丨 bool 丨 char
 C -> [ num ] C 丨 ε
-S -> L = E ; 丨 if ( B ) S else S 丨 do S while ( B ) 丨 call id ( Elist ) ; 丨 return E ; 丨 if ( B ) S
-L -> L [ num ] 丨 id
+S -> id = E ; 丨 if ( B ) BM S N else BM S 丨 while BM ( B ) BM S 丨 call id ( Elist ) ; 丨 return E ; 丨 if ( B ) BM S 丨 L = E ;
+L -> L [ E ] 丨 id [ E ]
 E -> E + G 丨 G
 G -> G * F 丨 F
-F -> ( E ) 丨 num 丨 id 丨 real 丨 string
-B -> B || H 丨 H
-H -> H && I 丨 I
+F -> ( E ) 丨 num 丨 id 丨 real 丨 string 丨 L
+B -> B || BM H 丨 H
+H -> H && BM I 丨 I
 I -> ! I 丨 ( B ) 丨 E Relop E 丨 true 丨 false
+BM -> ε
+N -> ε
 Relop -> < 丨 <= 丨 > 丨 >= 丨 == 丨 !=
 Elist -> Elist , E 丨 E

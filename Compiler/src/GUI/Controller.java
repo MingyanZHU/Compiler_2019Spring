@@ -6,6 +6,8 @@ import javafx.scene.control.TextArea;
 import lexer.Lexer;
 import parser.Parser;
 import parser.Production;
+import parser.Symbol;
+import symbols.SymbolBoard;
 
 import java.io.*;
 import java.util.List;
@@ -30,6 +32,10 @@ public class Controller {
     public TextArea lrTableArea = new TextArea();
     public TextArea parserProductions = new TextArea();
     public TextArea parserErrorArea = new TextArea();
+    public Tab semanticTab = new Tab();
+    public TextArea interCodeArea = new TextArea();
+    public TextArea semanticErrorArea = new TextArea();
+    public TextArea symbolTable = new TextArea();
     private Lexer lexer;
     private Parser parser;
 
@@ -109,6 +115,25 @@ public class Controller {
                     parserError.append(error).append("\n");
                 parserErrorArea.setText(parserError.toString());
                 parserErrorArea.setEditable(false);
+            } else if (semanticTab.isSelected()){
+                lexerReadSourceCode();
+                PrintStream origin = System.out;
+                PrintStream printStream = new PrintStream(new FileOutputStream("src/parser/interCode.txt"));
+                System.setOut(printStream);
+                parser.reduce(lexer.getTokens());
+                System.setOut(origin);
+                interCodeArea.setText(readFromFile("src/parser/interCode.txt"));
+                interCodeArea.setEditable(false);
+
+                symbolTable.setEditable(false);
+                symbolTable.setText(parser.getTable().toString());
+
+                semanticErrorArea.setStyle(errorCSS);
+                StringBuilder parserError = new StringBuilder();
+                for (String error : parser.getErrorMessages())
+                    parserError.append(error).append("\n");
+                semanticErrorArea.setText(parserError.toString());
+                semanticErrorArea.setEditable(false);
             }
         } catch (IOException e) {
             e.printStackTrace();

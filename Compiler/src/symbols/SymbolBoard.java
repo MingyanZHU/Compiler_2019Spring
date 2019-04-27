@@ -31,8 +31,11 @@ public class SymbolBoard {
     @Override
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();
-        for (SymbolItem item : board.values())
+        for (SymbolItem item : board.values()) {
             stringBuilder.append(item).append("\n");
+            if (item instanceof ProcSymbolItem)
+                stringBuilder.append(item.getIdentifier()).append(" Table:\n").append("{\n").append(((ProcSymbolItem) item).getProcSymbolTable()).append("}\n");
+        }
         return stringBuilder.toString();
     }
 }
