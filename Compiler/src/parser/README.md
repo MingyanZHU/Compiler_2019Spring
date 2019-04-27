@@ -32,7 +32,9 @@ X -> int `{{X.type = interger; X.width = 4;}}`丨 float `{{X.type = float; X.wid
 
 C -> [ num ] C 丨 ε `{{C.type = t; C.width = w;}}`
 
-S -> id = E ; `{{p = loopUp(id.lexeme); if p == null then error else gen(p, '=', E.addr);}}`丨 if ( B ) S else S 丨 do S while ( B ) 丨 call id ( Elist ) ; 丨 return E ; 丨 if ( B ) S 丨 L = E ;
+S -> id = E ; `{{S.nextList = null; p = loopUp(id.lexeme); if p == null then error else gen(p, '=', E.addr);}}`丨 if ( B ) BM S N else BM S `{{backpatch(B.trueList, BM1.instr); backpatch(B.falseList, BM2.instr); temp = merge(S1.nextList, N.nextList); S.nextList = merge(temp, S2.nextList); }}` 丨 while BM ( B ) BM S `{{backpatch(S1.nextList, BM1.instr); backpatch(B.trueList, BM2.instr); S.nextList = B.falseList; gen('goto', BM1.instr); }}` 丨 call id ( Elist ) ; 丨 return E ; 丨 if ( B ) BM S `{{backpatch(B.trueList, BM.instr); S.nextList = merge(B.falseList, S1.nextList); }}` 丨 L = E ;
+
+N -> ε `{{N.nextList = makeList(nextInstr); gen('goto'); }}`
 
 L -> L [ E ] 丨 id [ E ]
 

@@ -7,6 +7,7 @@ public class Symbol {
     private final Map<String, String> attribute = new HashMap<>();
     private List<Integer> falseList = new ArrayList<>();
     private List<Integer> trueList = new ArrayList<>();
+    private List<Integer> nextList = new ArrayList<>();
 
     public Symbol(String name) {
         this.name = name;
@@ -24,15 +25,19 @@ public class Symbol {
         return attribute.get(key);
     }
 
-    public List<Integer> makeList(int nextInstr, boolean T) {
-        if (T)   // true List
+    public List<Integer> makeList(int nextInstr, int i) {
+        if (i == 1)   // true List
         {
             trueList.add(nextInstr);
             return new ArrayList<>(trueList);
-        } else {
+        } else if (i == 0) {
             // false list
             falseList.add(nextInstr);
             return new ArrayList<>(falseList);
+        } else {
+            // nextList
+            nextList.add(nextInstr);
+            return new ArrayList<>(nextList);
         }
     }
 
@@ -44,25 +49,39 @@ public class Symbol {
         return new ArrayList<>(trueList);
     }
 
-    public List<Integer> merge(List<Integer> list1, List<Integer> list2, boolean T) {
-        if (T) {
+    public List<Integer> getNextList() {
+        return new ArrayList<>(nextList);
+    }
+
+    public List<Integer> merge(List<Integer> list1, List<Integer> list2, int i) {
+        if (i == 1) {
+            // true list
             trueList.addAll(new HashSet<>(list1));
             trueList.addAll(new HashSet<>(list2));
             return new ArrayList<>(trueList);
-        } else {
+        } else if (i == 0) {
             falseList.addAll(new HashSet<>(list1));
             falseList.addAll(new HashSet<>(list2));
             return new ArrayList<>(falseList);
+        } else {
+            nextList.addAll(new HashSet<>(list1));
+            nextList.addAll(new HashSet<>(list2));
+            return new ArrayList<>(nextList);
         }
     }
 
-    public List<Integer> addList(List<Integer> list, boolean T) {
-        if (T) {
+    public List<Integer> addList(List<Integer> list, int i) {
+        if (i == 1) {
+            // true List
             trueList.addAll(new HashSet<>(list));
             return new ArrayList<>(trueList);
-        } else {
+        } else if (i == 0) {
+            // false list
             falseList.addAll(new HashSet<>(list));
             return new ArrayList<>(falseList);
+        } else {
+            nextList.addAll(new HashSet<>(list));
+            return new ArrayList<>(nextList);
         }
     }
 

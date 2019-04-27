@@ -447,6 +447,7 @@ public class Parser {
                 declarations_t = symbolStack.peek().getAttribute("type");
                 declarations_w = symbolStack.peek().getAttribute("width");
             }
+            
 
             int aIndex = lrTableHead.indexOf(currentSymbol) + 1;
             boolean syntaxErrorOccurred = false;
@@ -630,7 +631,7 @@ public class Parser {
                     Symbol G = new Symbol("G");
                     G.addAttribute("addr", temp + countTemp);
                     countTemp++;
-                    InterCode interCode = new InterCode(new String[]{G.getAttribute("addr"), "=", G1.getAttribute("addr"), "+", F.getAttribute("addr")});
+                    InterCode interCode = new InterCode(new String[]{G.getAttribute("addr"), "=", G1.getAttribute("addr"), "*", F.getAttribute("addr")});
                     interCodeList.add(interCode);
                     nextInstr++;
                     symbolStack.push(G);
@@ -692,7 +693,7 @@ public class Parser {
                     stateStack.pop();
                     Symbol I = new Symbol("I");
 //                    I.addAttribute("falseList", nextInstr + "");
-                    I.makeList(nextInstr, false);
+                    I.makeList(nextInstr, 0);
                     InterCode interCode = new InterCode(new String[]{"goto"});
                     interCodeList.add(interCode);
                     nextInstr++;
@@ -706,7 +707,7 @@ public class Parser {
                     stateStack.pop();
                     Symbol I = new Symbol("I");
 //                    I.addAttribute("trueList", nextInstr + "");
-                    I.makeList(nextInstr, true);
+                    I.makeList(nextInstr, 1);
                     InterCode interCode = new InterCode(new String[]{"goto"});
                     interCodeList.add(interCode);
                     nextInstr++;
@@ -724,11 +725,11 @@ public class Parser {
                     stateStack.pop();
 
                     Symbol I = new Symbol("I");
-                    I.makeList(nextInstr, true);
-                    I.makeList(nextInstr + 1, false);
+                    I.makeList(nextInstr, 1);
+                    I.makeList(nextInstr + 1, 0);
 //                    I.addAttribute("trueList", nextInstr + "");
 //                    I.addAttribute("falseList", (nextInstr + 1) + "");
-                    InterCode interCode1 = new InterCode(new String[]{"if", E1.getAttribute("addr"), Relop.getAttribute("op"), E2.getAttribute("addr"), "goto"});
+                    InterCode interCode1 = new InterCode(new String[]{"if", E2.getAttribute("addr"), Relop.getAttribute("op"), E1.getAttribute("addr"), "goto"});
                     InterCode interCode2 = new InterCode(new String[]{"goto"});
                     interCodeList.add(interCode1);
                     interCodeList.add(interCode2);
@@ -747,8 +748,8 @@ public class Parser {
                     stateStack.pop();
 
                     Symbol I = new Symbol("I");
-                    I.addList(B.getTrueList(), true);
-                    I.addList(B.getFalseList(), false);
+                    I.addList(B.getTrueList(), 1);
+                    I.addList(B.getFalseList(), 0);
 //                    I.addAttribute("trueList", B.getAttribute("trueList"));
 //                    I.addAttribute("falseList", B.getAttribute("falseList"));
                     symbolStack.push(I);
@@ -763,8 +764,8 @@ public class Parser {
                     stateStack.pop();
 
                     Symbol I = new Symbol("I");
-                    I.addList(I1.getFalseList(), true);
-                    I.addList(I1.getTrueList(), false);
+                    I.addList(I1.getFalseList(), 1);
+                    I.addList(I1.getTrueList(), 0);
 //                    I.addAttribute("trueList", I1.getAttribute("trueList"));
 //                    I.addAttribute("falseList", I1.getAttribute("falseList"));
                     symbolStack.push(I);
@@ -807,8 +808,8 @@ public class Parser {
                         interCodeList.get(i).backPatch(BM.getAttribute("instr"));
 
                     Symbol H = new Symbol("H");
-                    H.addList(I.getTrueList(), true);
-                    H.merge(H1.getFalseList(), I.getFalseList(), false);
+                    H.addList(I.getTrueList(), 1);
+                    H.merge(H1.getFalseList(), I.getFalseList(), 0);
                     symbolStack.push(H);
                     stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
                     ans.add(currentReduceProduction);
@@ -818,8 +819,8 @@ public class Parser {
                     Symbol I = symbolStack.pop();
                     stateStack.pop();
                     Symbol H = new Symbol("H");
-                    H.addList(I.getTrueList(), true);
-                    H.addList(I.getFalseList(), false);
+                    H.addList(I.getTrueList(), 1);
+                    H.addList(I.getFalseList(), 0);
 
                     symbolStack.push(H);
                     stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
@@ -839,8 +840,8 @@ public class Parser {
 
                     for (int i : B1.getFalseList())
                         interCodeList.get(i).backPatch(BM.getAttribute("instr"));
-                    B.merge(B1.getTrueList(), H.getTrueList(), true);
-                    B.addList(H.getFalseList(), false);
+                    B.merge(B1.getTrueList(), H.getTrueList(), 1);
+                    B.addList(H.getFalseList(), 0);
                     symbolStack.push(B);
                     stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
                     ans.add(currentReduceProduction);
@@ -851,13 +852,113 @@ public class Parser {
                     stateStack.pop();
 
                     Symbol B = new Symbol("B");
-                    B.addList(H.getFalseList(), false);
-                    B.addList(H.getTrueList(), true);
+                    B.addList(H.getFalseList(), 0);
+                    B.addList(H.getTrueList(), 1);
                     symbolStack.push(B);
                     stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
                     ans.add(currentReduceProduction);
                 }
+                // S -> if ( B ) BM S N else BM S
+                else if (currentReduceProduction.getLeft().equals("S") && currentReduceProduction.getRight().size() == 10) {
+                    Symbol S2 = symbolStack.pop();
+                    stateStack.pop();
+                    Symbol BM2 = symbolStack.pop();
+                    stateStack.pop();
+                    symbolStack.pop(); // pop "else"
+                    stateStack.pop();
+                    Symbol N = symbolStack.pop();
+                    stateStack.pop();
+                    Symbol S1 = symbolStack.pop();
+                    stateStack.pop();
+                    Symbol BM1 = symbolStack.pop();
+                    stateStack.pop();
+                    symbolStack.pop();  // pop ")"
+                    stateStack.pop();
+                    Symbol B = symbolStack.pop();
+                    stateStack.pop();
+                    symbolStack.pop();  // pop "("
+                    stateStack.pop();
+                    symbolStack.pop();  // pop "if"
+                    stateStack.pop();
 
+                    Symbol S = new Symbol("S");
+                    for (int i : B.getTrueList())
+                        interCodeList.get(i).backPatch(BM1.getAttribute("instr"));
+                    for (int i : B.getFalseList())
+                        interCodeList.get(i).backPatch(BM2.getAttribute("instr"));
+                    List<Integer> tempIntegerList = new ArrayList<>();
+                    tempIntegerList.addAll(new HashSet<>(S1.getNextList()));
+                    tempIntegerList.addAll(new HashSet<>(N.getNextList()));
+                    S.merge(tempIntegerList, S2.getNextList(), -1);
+
+                    symbolStack.push(S);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+                // S -> if ( B ) BM S
+                else if (currentReduceProduction.getLeft().equals("S") && currentReduceProduction.getRight().size() == 6 && currentReduceProduction.getRight().get(0).equals("if")) {
+                    Symbol S1 = symbolStack.pop();
+                    stateStack.pop();
+                    Symbol BM = symbolStack.pop();
+                    stateStack.pop();
+                    symbolStack.pop();  // ")"
+                    stateStack.pop();
+                    Symbol B = symbolStack.pop();
+                    stateStack.pop();
+                    symbolStack.pop();  // "("
+                    stateStack.pop();
+                    symbolStack.pop();  // "if"
+                    stateStack.pop();
+
+                    for (int i : B.getTrueList())
+                        interCodeList.get(i).backPatch(BM.getAttribute("instr"));
+                    Symbol S = new Symbol("S");
+                    S.merge(B.getFalseList(), S1.getNextList(), -1);
+                    symbolStack.push(S);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+                // S -> while BM ( B ) BM S
+                else if (currentReduceProduction.getLeft().equals("S") && currentReduceProduction.getRight().size() == 7 && currentReduceProduction.getRight().get(0).equals("while")) {
+                    Symbol S1 = symbolStack.pop();
+                    stateStack.pop();
+                    Symbol BM2 = symbolStack.pop();
+                    stateStack.pop();
+                    symbolStack.pop(); // pop ")"
+                    stateStack.pop();
+                    Symbol B = symbolStack.pop();
+                    stateStack.pop();
+                    symbolStack.pop();  // pop "("
+                    stateStack.pop();
+                    Symbol BM1 = symbolStack.pop();
+                    stateStack.pop();
+                    symbolStack.pop();  // pop "while"
+                    stateStack.pop();
+
+                    Symbol S = new Symbol("S");
+                    for(int i : S1.getNextList())
+                        interCodeList.get(i).backPatch(BM1.getAttribute("instr"));
+                    for(int i : B.getTrueList())
+                        interCodeList.get(i).backPatch(BM2.getAttribute("instr"));
+                    S.addList(B.getFalseList(), -1);
+                    InterCode interCode = new InterCode(new String[]{"goto", BM1.getAttribute("instr")});
+                    interCodeList.add(interCode);
+                    nextInstr++;
+                    symbolStack.push(S);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
+                // N -> epsilon
+                else if(currentReduceProduction.getLeft().equals("N") && currentReduceProduction.getRight().size() == 1){
+                    Symbol N = new Symbol("N");
+                    N.makeList(nextInstr, -1);
+                    InterCode interCode = new InterCode(new String[]{"goto"});
+                    interCodeList.add(interCode);
+                    nextInstr++;
+                    symbolStack.push(N);
+                    stateStack.push(Integer.parseInt(lrTable[stateStack.peek() + 1][lrTableHead.indexOf(currentReduceProduction.getLeft()) + 1]));
+                    ans.add(currentReduceProduction);
+                }
                 // without semantic action
                 else {
                     int rightSize = currentReduceProduction.getRight().size() == 1 && currentReduceProduction.getRight().get(0).equals(EMPTY_STRING_CHARACTER) ? 0 : currentReduceProduction.getRight().size();
@@ -945,8 +1046,8 @@ public class Parser {
             }
         }
         // TODO 表达式方向不对 M记录的位置不对
-        for(int i = 0;i<interCodeList.size();i++)
-            System.out.println((i+1) + " : " + interCodeList.get(i));
+        for (int i = 0; i < interCodeList.size(); i++)
+            System.out.println(i + " : " + interCodeList.get(i));
 
         return ans;
     }

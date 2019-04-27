@@ -6,7 +6,7 @@ M -> M , X id 丨 X id
 T -> X C
 X -> int 丨 float 丨 bool 丨 char
 C -> [ num ] C 丨 ε
-S -> id = E ; 丨 if ( B ) S else S 丨 do S while ( B ) ; 丨 call id ( Elist ) ; 丨 return E ; 丨 if ( B ) S 丨 L = E ;
+S -> id = E ; 丨 if ( B ) BM S N else BM S 丨 while BM ( B ) BM S 丨 call id ( Elist ) ; 丨 return E ; 丨 if ( B ) BM S 丨 L = E ;
 L -> L [ E ] 丨 id [ E ]
 E -> E + G 丨 G
 G -> G * F 丨 F
@@ -15,5 +15,6 @@ B -> B || BM H 丨 H
 H -> H && BM I 丨 I
 I -> ! I 丨 ( B ) 丨 E Relop E 丨 true 丨 false
 BM -> ε
+N -> ε
 Relop -> < 丨 <= 丨 > 丨 >= 丨 == 丨 !=
 Elist -> Elist , E 丨 E
