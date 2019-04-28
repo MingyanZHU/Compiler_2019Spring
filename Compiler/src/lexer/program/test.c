@@ -18,6 +18,9 @@ while (a < b)
 
 a = b + c * (d + e);
 
+if(a > b)
+    c = d;
+
 proc float function(float i){
     i = i + 1;
     return i;
