@@ -16,6 +16,10 @@ public class InterCode {
         interCode.add(back);
     }
 
+    public List<String> getInterCode() {
+        return new ArrayList<>(interCode);
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();

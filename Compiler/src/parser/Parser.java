@@ -743,7 +743,14 @@ public class Parser {
 
                         G.addAttribute("addr", temp + countTemp);
                         countTemp++;
-                        InterCode interCode = new InterCode(new String[]{G.getAttribute("addr"), "=", G1.getAttribute("addr"), "*", F.getAttribute("addr")});
+                        InterCode interCode;
+                        if (G1.getAttribute("addr").equals("2")) {
+                            interCode = new InterCode(new String[]{G.getAttribute("addr"), "=", F.getAttribute("addr"), "+", F.getAttribute("addr")});
+                        } else if (F.getAttribute("addr").equals("2")) {
+                            interCode = new InterCode(new String[]{G.getAttribute("addr"), "=", G1.getAttribute("addr"), "+", G1.getAttribute("addr")});
+                        } else {
+                            interCode = new InterCode(new String[]{G.getAttribute("addr"), "=", G1.getAttribute("addr"), "*", F.getAttribute("addr")});
+                        }
                         interCodeList.add(interCode);
                         nextInstr++;
                     } else {
@@ -1339,9 +1346,27 @@ public class Parser {
                 errorMessage = new StringBuilder();
             }
         }
-        // TODO 表达式方向不对 M记录的位置不对
-        for (int i = 0; i < interCodeList.size(); i++)
-            System.out.println(i + " : " + interCodeList.get(i));
+
+        List<InterCode> optimisedInterCode = new ArrayList<>();
+        for (int i = 0; i < interCodeList.size(); i++) {
+            InterCode interCode = interCodeList.get(i);
+            if (interCode.getInterCode().size() >= 3 && interCode.getInterCode().get(1).equals("=") && i < interCodeList.size() - 1) {
+                InterCode interCode1 = interCodeList.get(i + 1);
+                String lastLeft = interCode.getInterCode().get(0);
+                if (interCode1.getInterCode().size() == 3 && interCode1.getInterCode().get(1).equals("=") && interCode1.getInterCode().get(2).equals(lastLeft)) {
+                    List<String> newInterCode = new ArrayList<>();
+                    newInterCode.add(interCode1.getInterCode().get(0));
+                    newInterCode.addAll(interCode.getInterCode().subList(1, interCode.getInterCode().size()));
+                    String [] strings = new String[newInterCode.size()];
+                    optimisedInterCode.add(new InterCode(newInterCode.toArray(strings)));
+                    i++;
+                    continue;
+                }
+            }
+            optimisedInterCode.add(interCode);
+        }
+        for (int i = 0; i < optimisedInterCode.size(); i++)
+            System.out.println(i + " : " + optimisedInterCode.get(i));
 
         return ans;
     }
