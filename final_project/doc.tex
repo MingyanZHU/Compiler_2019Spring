@@ -1,0 +1,199 @@
+\documentclass{ML}
+\usepackage{fontspec}
+\usepackage{color}
+\newfontfamily\unicodefont{Courier New}
+% 姓名，学号
+\infoauthor{朱明彦}{1160300314}
+
+% 课程类型，实验名称
+\infoexp{课程类型}{大作业}
+
+\infoschool{计算机学院}{辛明影}
+
+\begin{document}
+\maketitle
+
+\tableofcontents
+\newpage
+
+\begin{center}
+    \textbf{\zihao{3} 编译原理 大作业}
+\end{center}
+
+\section{需求分析}
+在词法分析、语法分析和语义分析的实验基础之上，结合代码优化等技术，将之前的\texttt{Lexer, Parser}结合起来，形成一个完整的编译器前端程序。
+\section{文法设计}
+最终实现的文法以及语义动作的定义如下所示，其中{\color{red}红色}字体为该产生式对应的语义动作。
+\begin{enumerate}
+    {\unicodefont \footnotesize
+    \item Start -> P 
+    \vspace{0.5cm}
+    
+    \item P -> PStart D P \textbf{|}
+    
+    \hspace{1cm}PStart S P \textbf{|} $\epsilon$
+    
+    \vspace{0.5cm}
+    
+    \item PStart -> $\epsilon$ {\color{red}\{ env = new Env(env); offsetStack.push(offset); offset=0;\}}
+    \vspace{0.5cm}
+    
+    \item D -> proc X id ( M ) DM { P } {\color{red}\{pop(tableStack); pop(offset)\}} \textbf{|}
+    
+    \hspace{1cm} record id { P } \textbf{|}
+    
+    \hspace{1cm} T id A ; {\color{red}\{enter(id.lexeme, T.type, offset);offset = offset + T.width;\}}
+        \vspace{0.5cm}
+    
+    \item DM -> $\epsilon$ {\color{red}\{table = mkTable(top(tableStack)); push(table); push(offset); offset = 0;\}}
+    \vspace{0.1cm}
+    
+    \item A -> = F A \textbf{|} , id A \textbf{|} $\epsilon$
+    \vspace{0.5cm}
+    
+    \item M -> M , X id {\color{red}\{enter(id.lexeme, X.type, offset); offset = offset + X.width; M.size = M1.size + 1;\}} \textbf{|} 
+    
+    \hspace{0.5cm}X id {\color{red}\{enter(id.lexeme, X.type, offset); offset = offset + X.width; M.size = 1;\}}
+    \vspace{0.1cm}
+    
+    \item T -> X {\color{red}\{t = X.type; w = X.width;\}} C {\color{red}\{T.type = C.type; T.width = C.width;\}}
+    \vspace{0.5cm}
+    
+    \item X -> int {\color{red}\{X.type = interger; X.width = 4;\}}\textbf{|} 
+    
+    \hspace{1cm}float {\color{red}\{X.type = float; X.width = 8;\}} \textbf{|}
+         bool \textbf{|} char
+    \vspace{0.5cm}
+    
+    \item C -> [ num ] C {\color{red}\{C.type = C1.type + '[' + num.value + ']'; C.width = num.value * C1.width;\}} \textbf{|}
+         $\epsilon$ {\color{red}\{C.type = t; C.width = w;\}}
+    
+         \vspace{0.5cm}
+    \item S -> id = E ; {\color{red}\{S.nextList = null; p = loopUp(id.lexeme); if p == null then error else gen(p, '=', E.addr);\}} \textbf{|}
+    
+    \hspace{1cm}if ( B ) BM S N else BM S {\color{red}\{backpatch(B.trueList, BM1.instr); backpatch(B.falseList, BM2.instr); temp = merge(S1.nextList, N.nextList); S.nextList = merge(temp, S2.nextList); \}} \textbf{|} 
+    
+    \hspace{1cm}while BM ( B ) BM S {\color{red}\{backpatch(S1.nextList, BM1.instr); backpatch(B.trueList, BM2.instr); S.nextList = B.falseList; gen('goto', BM1.instr); \}} \textbf{|} 
+    
+    \hspace{1cm}call id ( Elist ) ; \textbf{|} return E ; \textbf{|} if ( B ) BM S {\color{red}\{backpatch(B.trueList, BM.instr); S.nextList = merge(B.falseList, S1.nextList); \}} \textbf{|} 
+    
+    \hspace{1cm}L = E ; {\color{red}\{gen(L.array, L.addr, '=', E.addr)\}}
+    \vspace{0.5cm}
+    
+    \item N -> $\epsilon$ {\color{red}\{N.nextList = makeList(nextInstr); gen('goto'); \}}
+    
+    \vspace{0.5cm}
+    \item L -> L [ E ] {\color{red}\{L.array = L1.array; L.type = L1.type.elem; L.width = L.type.width; t = new Temp(); L.addr = new Temp(); gen(L.addr, '=', E.addr, '*', L.width); gen(L.addr, '=', L1.addr, '+', t); \}} \textbf{|} 
+    
+    \hspace{1cm}id [ E ] {\color{red}\{p = lookUp(id.lexeme); if p == null then error else L.array = p; L.type = id.type; L.addr = new Temp(); gen(L.addr, 'addr', E.addr, '*', L.width)\}}
+    \vspace{0.5cm}
+    
+    \item E -> E + G {\color{red}\{E.addr = newTemp(); gen(E.addr, '=', E1.addr, '+', G.addr);\}} \textbf{|}
+    
+    \hspace{1cm}G {\color{red}\{E.addr = G.addr;\}}
+    
+    \vspace{0.5cm}
+    \item G -> G * F {\color{red}\{G.addr = newTemp(); gen(G.addr, '=', G1.addr, '*', F.addr);\}}\textbf{|} 
+    
+    \hspace{1cm}F {\color{red}\{G.addr = F.addr;\}}
+    \vspace{0.5cm}
+    
+    \item F -> ( E ) {\color{red}\{F.addr = E.addr;\}} \textbf{|} 
+    
+    \hspace{1cm}num {\color{red}\{F.addr = num.value;\}} \textbf{|}
+    
+    \hspace{1cm}id {\color{red}\{F.addr = lookup(id.lexeme); if F.addr == null then error;\}}\textbf{|} real {\color{red}\{F.addr = real.value;\}}\textbf{|} string \textbf{|} L {\color{red}\{F.addr = L.array + '[' + L.addr']'\}}
+    \vspace{0.5cm}
+    
+    \item B -> B || BM H {\color{red}\{backpatch(B1.falseList, BM.instr); B.trueList = merge(B1.trueList, H.trueList); B.falstList = H.falstList;\}} \textbf{|}
+    
+    \hspace{1cm}H {\color{red}\{B.trueList = H.trueList; B.falseList = H.falseList;\}}
+    \vspace{0.5cm}
+    
+    \item H -> H \&\& BM I {\color{red}\{backpatch(H1.trueList, BM.instr); H.trueList = I.trueList; H.falseList = merge(H1.falseList, I.falseList);\}} \textbf{|}
+    
+    \hspace{1cm}I {\color{red}\{H.trueList = I.trueList; H.falseList = I.falseList;\}}
+    \vspace{0.5cm}
+    
+    \item I -> ! I {\color{red}\{I.trueList = I1.falseList; I.falseList = I1.falseList;\}} \textbf{|}
+    
+    \hspace{1cm}( B ) {\color{red}\{I.trueList = B.trueList; I.falseList = B.falseList;\}} \textbf{|}
+    
+    \hspace{1cm}E Relop E {\color{red}\{I.trueList = makeList(nextInstr); I.falseList = makeList(nextInstr + 1); gen('if', E1.addr, Relop.op, E2.addr, 'goto'); gen('goto');\}} \textbf{|}
+    
+    \hspace{1cm}true {\color{red}\{I.trueList = makeList(nextInstr); gen('goto');\}} \textbf{|}
+    
+    \hspace{1cm}false {\color{red}\{I.falseList = makeList(nextInstr); gen('goto');\}}
+    \vspace{0.5cm}
+    
+    \item BM -> $\epsilon$ {\color{red}\{BM.instr = nextInstr\}}
+    \vspace{0.5cm}
+    
+    \item Relop -> < \textbf{|} <= \textbf{|} > \textbf{|} >= \textbf{|} == \textbf{|} != {\color{red}\{Relop.op = op\}}
+    \vspace{0.5cm}
+    
+    \item Elist -> Elist , E {\color{red}\{Elist.size = Elist1.size + 1;\}} \textbf{|}
+         E {\color{red}\{Elist.size = 1;\}}
+    }
+\end{enumerate}
+\section{系统设计}
+\subsection{编译器框架}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{media/Compiler.png}
+    \caption{编译器框架图}\label{fig:compiler}
+\end{figure}
+
+对于大作业最终实现的编译器，其UML图如\ref{fig:compiler}所示，下面分别对其中不同的实现进行阐述。
+\begin{itemize}
+    \item \texttt{Lexer}为整个编译器的词法分析器部分，其可以将输入的类C语言源文件转化为Token序列，并作为下一步语法分析器的输入。
+    \item \texttt{Parser}为整个编译器的语法分析器部分，在本项目中实现了LR(1)分析法，并在语法分析的同时进行语义动作，即所有的语义动作作用的属性均为S属性\cite{dragon-book}，最终结果为中间代码。
+    \item \texttt{Controller}为整个编译器GUI的控制部分，其使用\texttt{JavaFX}实现。
+    \item \texttt{Main}为整个编译器的主程序部分，启动GUI形式的编译器，调用\texttt{Main}对应的主函数即可。
+    \item \texttt{Token, Real, Num, Word}分别为\texttt{Lexer}输出的Token的父类、浮点型常数类、整数常数类以及标识符和字符串型常数类的父类。
+    \item \texttt{Tag}为标注Token类别的枚举类型。
+    \item \texttt{LexerException}为发现词法分析错误抛出的异常类。
+    \item \texttt{Production}为语法中的产生式类，分别记录产生式左部和右部。
+    \item \texttt{Item, ItemSet}分别为项目类和项目集类，其中项目类即在进行LR(1)语法分析时，对应的“项目”概念的类，即文法中的一个产生式和位于它的右部中某处的点组成；项目集类，则是项目的集合。
+    \item \texttt{InterCode}为\texttt{Parser}最终结果对应的中间代码类。
+    \item \texttt{SymbolItem, ProcSymbolItem}分别对应符号表中表项的父类和符号表中方法表项类，其区别为方法表项中包含其对应的局部符号表。
+    \item \texttt{SymbolBoard}为符号表类，其包含的表项均为\texttt{SymbolItem}类。
+    \item \texttt{Symbol}为产生式中的符号类，或者称为非终结符类，其在产生式中的右部时可能会包含S属性，方便语义分析时的语义动作处理。
+\end{itemize}
+
+\subsection{核心数据结构}
+在本项目的所实现的编译器中，所用的数据结构有\texttt{栈、队列、集合、Map和多维数组}，其中\texttt{栈}为最重要的数据结构。
+下面分别阐述各个数据结构在编译器中起到的作用。
+
+\begin{itemize}
+    \item \textbf{栈(Stack)}，作为核心数据结构，在\texttt{Parser}中使用栈记录调用关系，包括记录offset和符号表。
+    \item \textbf{队列(Queue)}，在\texttt{Lexer}中作为输入缓冲实现，其作用是进行一些有二义符号，如$>, >=$。
+    \item \textbf{集合(Set)}，其多次出现在本项目的实现中，分别作为\texttt{Lexer}中各种符号的记录，\texttt{Parser}中产生式、终结符、非终结符以及项目集族的记录。
+    \item \textbf{Map}，其多次出现在本项目实现的Compiler中，如记录标识符与其对应的符号表条目、LR(1)分析法中记录非终结符的First集以及每个项目闭包的GOTO表。
+    \item \textbf{Array}，主要用于记录LR(1)分析表。
+\end{itemize}
+
+\subsection{主要函数功能}
+% TODO
+
+\subsection{核心流程图}
+% TODO 
+
+\section{系统实现}
+% TODO
+\subsection{源文件}
+\subsection{语法分析表}
+\subsection{产生式序列}
+\subsection{中间代码}
+\subsection{附加：代码优化}
+\subsection{GUI展示}
+\appendix
+
+% \section{源代码}
+\section{参考文献}
+\begin{thebibliography}{20}
+    % \bibitem{employee_name} 中国最常见名字前50名, \texttt{https://www.sohu.com/a/164406113\_367620}
+    \bibitem{dragon-book} Aho A V, Sethi R, Ullman J D. Compilers, principles, techniques[J]. Addison wesley, 1986, 7(8): 9.
+\end{thebibliography}
+
+\end{document}
