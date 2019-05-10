@@ -1,6 +1,11 @@
 \documentclass{ML}
 \usepackage{fontspec}
 \usepackage{color}
+\usepackage{multicol}
+\newminted{text}{framesep=2mm,fontsize=\scriptsize, linenos}
+\newminted{python}{frame=lines, framesep=2mm, linenos}
+\newminted{c}{frame=lines, framesep=2mm, linenos}
+\newminted{java}{frame=lines, framesep=2mm, linenos}
 \newfontfamily\unicodefont{Courier New}
 % 姓名，学号
 \infoauthor{朱明彦}{1160300314}
@@ -22,7 +27,35 @@
 
 \section{需求分析}
 在词法分析、语法分析和语义分析的实验基础之上，结合代码优化等技术，将之前的\texttt{Lexer, Parser}结合起来，形成一个完整的编译器前端程序。
-\section{文法设计}
+\section{关键字定义与文法设计}
+\subsection{关键字定义}
+在词法分析部分对于关键字的定义是通过\texttt{Java}中的枚举类型来实现。
+\begin{javacode}
+public enum Tag {
+    INT("int"), FLOAT("float"), BOOL("bool"), CHAR("char"), RECORD("record"), 
+    IF("if"), ELSE("else"), DO("do"), WHILE("while"), 
+    BREAK("break"), CONTINUE("continue"), TRUE("true"), 
+    FALSE("false"), RETURN("return"),// keyword
+    
+    ADD("+"), SUB("-"), MUL("*"), DIV("/"), MOD("%"), // arithmetic op
+
+    NE("!="), G(">"), GE(">="), L("<"), LE("<="), EQ("=="), 
+    AND("&&"), OR("||"), NOT("!"), // logical op
+    
+    SLP("("), SRP(")"), LP("{"), RP("}"), MLP("["), MRP("]"), 
+    ASSIGN("="), SEMICOLON(";"), COMMA(","), // delimiters
+    
+    REAL("real"), // float number
+    NUM("num"), // integer number
+    ID("id"),  // identifier
+    STRING("string"),
+    STACK_BOTTOM(Parser.STACK_BOTTOM_CHARACTER),
+    PROC("proc"), CALL("call"),
+    NULL("null");
+// 仅列出关键字部分 其余详见src/lexer/Tag.java
+}
+\end{javacode}
+\subsection{文法设计}\label{sec:grammar}
 最终实现的文法以及语义动作的定义如下所示，其中{\color{red}红色}字体为该产生式对应的语义动作。
 \begin{enumerate}
     {\unicodefont \footnotesize
@@ -136,6 +169,8 @@
          E {\color{red}\{Elist.size = 1;\}}
     }
 \end{enumerate}
+
+\textbf{为了语义动作的设计，以上文法为二义文法，在\texttt{Parser}中设计为移进优先于规约，解决了\texttt{else悬空}的问题，具体见\texttt{src/parser/Parser.java}}。
 \section{系统设计}
 \subsection{编译器框架}
 \begin{figure}[H]
@@ -174,25 +209,785 @@
 \end{itemize}
 
 \subsection{主要函数功能}
-% TODO
 
-\subsection{核心流程图}
-% TODO 
+\subsubsection{\texttt{Lexer}主要函数功能}
+
+\begin{minted}{java}
+    public void scan();
+\end{minted}
+
+对于\texttt{Lexer}中的\texttt{scan}函数而言，主要功能为将输入的源文件转化为对应的Token序列，负责完成\texttt{Lexer}的主要逻辑。
+
+\subsubsection{\texttt{Parser}主要函数功能}
+\begin{enumerate}
+    
+    \item \begin{minted}{java}
+    public List<Production> reduce(List<Token> tokens);
+    \end{minted}
+    
+    对于\texttt{Parser}中的\texttt{reduce}函数而言，由于在进行语法分析的同时可以进行语义分析，所以\texttt{reduce}函数完成了从词法分析器的Token序列，到语法分析的产生式序列的转换。
+    并且在函数返回之前，将最终的中间代码进行代码优化并输出。
+
+    \item \begin{minted}{java}
+    public void items();
+    \end{minted}
+
+    在\texttt{Parser}中另一个核心函数就是\texttt{items}，其实现的参考算法见\cite{dragon-book}在LR(1)分析法中提到的\textit{items()}算法，
+    主要实现了解析语法文件并生成对应的LR分析表的过程。
+\end{enumerate}
+% \subsection{核心流程图}
+% % TODO 
 
 \section{系统实现}
-% TODO
-\subsection{源文件}
+    以下内容主要介绍在本项目中实现的Compiler里，用于测试完成情况的文件，以及中间结果的展示。
+\subsection{源文件}\label{sec:source}
+\begin{ccode}
+    int a;
+    a = 1 + 2;
+    int b;
+    int c;
+    c = 10;
+    b = c + 1;
+    int d;
+    d = c * 2;
+    int e;
+    e = 0;
+    int x;
+    int y;
+    y = 999;
+    int z;
+    z = 100;
+    while (a < b)
+        if (c < d) x = y + z; else x = a + b;
+    
+    a = b + c * (d + e);
+    
+    if(a > b)
+        c = d;
+    
+    proc float function(float i){
+        i = i + 1;
+        return i;
+    }
+        
+        int [2][3] list;
+        int c;
+        int i;
+        int j;
+        int d;
+        float h;
+        d = c + list[i][j];
+        list[i][j] = c;
+        
+        d = h * c;
+        
+        c[1][2] = d;
+        proc int function(int a, int c){
+            a = c + 10;
+            int d;
+            return a;
+    }        
+\end{ccode}
+
+在以上的源文件中有\textit{变量的声明（包括普通变量和多维数组变量），变量的使用，分支结构（if-else），循环结构（while）以及函数的声明（使用proc关键字）}
+等不同的语句。
 \subsection{语法分析表}
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|l|l|l|l|l|l|l|}
+    \hline
+        & \&\&                    & ||                      & \textless{}=            & ... & A & B   & ... \\ \hline
+    0   &                         &                         &                         &     &   &     &     \\ \hline
+    1   &                         &                         &                         &     &   &     &     \\ \hline
+    2   &                         &                         &                         &     &   &     &     \\ \hline
+    3   &                         &                         &                         &     &   &     &     \\ \hline
+    ... &                         &                         &                         &     &   &     &     \\ \hline
+    58  &                         &                         &                         &     &   & 111 &     \\ \hline
+    59  &                         &                         & r(F -\textgreater real) &     &   &     &     \\ \hline
+    60  & r(I -\textgreater true) & r(I -\textgreater true) &                         &     &   &     &     \\ \hline
+    61  &                         & s160                    &                         &     &   &     &     \\ \hline
+    ... &                         &                         &                         &     &   &     &     \\ \hline
+    398 &                         &                         &                         &     &   &     &     \\ \hline
+    \end{tabular}
+    \caption{LR分析表（部分）}\label{tab:lr}
+\end{table}
+经过\texttt{Parser}的\texttt{items}函数处理在第\ref{sec:grammar}节中定义的文法，经过LR(1)分析得到的分析表如表\ref{tab:lr}所示。
+表\ref{tab:lr}中仅仅展示了部分LR分析表的内容，共有398个状态，对于终结符如左侧的$\&\&$，其对应的状态可能有移进如\texttt{s160}和规约如\texttt{r(I->true)}动作；
+对于非终结符如右侧的\texttt{A,B}等，其表示在相应状态和栈顶符号时应该转移的状态，即\texttt{GOTO表}。
+
+\textbf{完整的LR(1)分析表见\texttt{src/parser/LRTable.txt}所示}。
+\subsection{Token序列}\label{sec:token}
+\begin{multicols}{4}
+\begin{textcode}
+<INT>
+<ID, a>
+<SEMICOLON>
+<ID, a>
+<ASSIGN>
+<NUM, 1>
+<ADD>
+<NUM, 2>
+<SEMICOLON>
+<INT>
+<ID, b>
+<SEMICOLON>
+<INT>
+<ID, c>
+<SEMICOLON>
+<ID, c>
+<ASSIGN>
+<NUM, 10>
+<SEMICOLON>
+<ID, b>
+<ASSIGN>
+<ID, c>
+<ADD>
+<NUM, 1>
+<SEMICOLON>
+<INT>
+<ID, d>
+<SEMICOLON>
+<ID, d>
+<ASSIGN>
+<ID, c>
+<MUL>
+<NUM, 2>
+<SEMICOLON>
+<INT>
+<ID, e>
+<SEMICOLON>
+<ID, e>
+<ASSIGN>
+<NUM, 0>
+<SEMICOLON>
+<INT>
+<ID, x>
+<SEMICOLON>
+<INT>
+<ID, y>
+<SEMICOLON>
+<ID, y>
+<ASSIGN>
+<NUM, 999>
+<SEMICOLON>
+<INT>
+<ID, z>
+<SEMICOLON>
+<ID, z>
+<ASSIGN>
+<NUM, 100>
+<SEMICOLON>
+<WHILE>
+<SLP>
+<ID, a>
+<L>
+<ID, b>
+<SRP>
+<IF>
+<SLP>
+<ID, c>
+<L>
+<ID, d>
+<SRP>
+<ID, x>
+<ASSIGN>
+<ID, y>
+<ADD>
+<ID, z>
+<SEMICOLON>
+<ELSE>
+<ID, x>
+<ASSIGN>
+<ID, a>
+<ADD>
+<ID, b>
+<SEMICOLON>
+<ID, a>
+<ASSIGN>
+<ID, b>
+<ADD>
+<ID, c>
+<MUL>
+<SLP>
+<ID, d>
+<ADD>
+<ID, e>
+<SRP>
+<SEMICOLON>
+<IF>
+<SLP>
+<ID, a>
+<G>
+<ID, b>
+<SRP>
+<ID, c>
+<ASSIGN>
+<ID, d>
+<SEMICOLON>
+<PROC>
+<FLOAT>
+<ID, function>
+<SLP>
+<FLOAT>
+<ID, i>
+<SRP>
+<LP>
+<ID, i>
+<ASSIGN>
+<ID, i>
+<ADD>
+<NUM, 1>
+<SEMICOLON>
+<RETURN>
+<ID, i>
+<SEMICOLON>
+<RP>
+<INT>
+<MLP>
+<NUM, 2>
+<MRP>
+<MLP>
+<NUM, 3>
+<MRP>
+<ID, list>
+<SEMICOLON>
+<INT>
+<ID, c>
+<SEMICOLON>
+<INT>
+<ID, i>
+<SEMICOLON>
+<INT>
+<ID, j>
+<SEMICOLON>
+<INT>
+<ID, d>
+<SEMICOLON>
+<FLOAT>
+<ID, h>
+<SEMICOLON>
+<ID, d>
+<ASSIGN>
+<ID, c>
+<ADD>
+<ID, list>
+<MLP>
+<ID, i>
+<MRP>
+<MLP>
+<ID, j>
+<MRP>
+<SEMICOLON>
+<ID, list>
+<MLP>
+<ID, i>
+<MRP>
+<MLP>
+<ID, j>
+<MRP>
+<ASSIGN>
+<ID, c>
+<SEMICOLON>
+<ID, d>
+<ASSIGN>
+<ID, h>
+<MUL>
+<ID, c>
+<SEMICOLON>
+<ID, c>
+<MLP>
+<NUM, 1>
+<MRP>
+<MLP>
+<NUM, 2>
+<MRP>
+<ASSIGN>
+<ID, d>
+<SEMICOLON>
+<PROC>
+<INT>
+<ID, function>
+<SLP>
+<INT>
+<ID, a>
+<COMMA>
+<INT>
+<ID, c>
+<SRP>
+<LP>
+<ID, a>
+<ASSIGN>
+<ID, c>
+<ADD>
+<NUM, 10>
+<SEMICOLON>
+<INT>
+<ID, d>
+<SEMICOLON>
+<RETURN>
+<ID, a>
+<SEMICOLON>
+<RP>
+<STACK\_BOTTOM>
+\end{textcode}
+\end{multicols}
+经过\texttt{Lexer}的\texttt{scan}函数，将第\ref{sec:source}节的源代码转化成对应的Token序列，即上面所示。
+
+其中，对于关键字，如\texttt{int}等，其Token对应没有第二维的值，即\texttt{<INT>}；而对于如标识符\texttt{a}，其Token表示为\texttt{<ID, a>}。
 \subsection{产生式序列}
-\subsection{中间代码}
+\begin{multicols}{2}
+\begin{textcode}
+    X -> int
+    C -> epsilon
+    T -> X C
+    A -> epsilon
+    D -> T id A ;
+    F -> num
+    G -> F
+    E -> G
+    F -> num
+    G -> F
+    E -> E + G
+    S -> id = E ;
+    X -> int
+    C -> epsilon
+    T -> X C
+    A -> epsilon
+    D -> T id A ;
+    X -> int
+    C -> epsilon
+    T -> X C
+    A -> epsilon
+    D -> T id A ;
+    F -> num
+    G -> F
+    E -> G
+    S -> id = E ;
+    F -> id
+    G -> F
+    E -> G
+    F -> num
+    G -> F
+    E -> E + G
+    S -> id = E ;
+    X -> int
+    C -> epsilon
+    T -> X C
+    A -> epsilon
+    D -> T id A ;
+    F -> id
+    G -> F
+    F -> num
+    G -> G * F
+    E -> G
+    S -> id = E ;
+    X -> int
+    C -> epsilon
+    T -> X C
+    A -> epsilon
+    D -> T id A ;
+    F -> num
+    G -> F
+    E -> G
+    S -> id = E ;
+    X -> int
+    C -> epsilon
+    T -> X C
+    A -> epsilon
+    D -> T id A ;
+    X -> int
+    C -> epsilon
+    T -> X C
+    A -> epsilon
+    D -> T id A ;
+    F -> num
+    G -> F
+    E -> G
+    S -> id = E ;
+    X -> int
+    C -> epsilon
+    T -> X C
+    A -> epsilon
+    D -> T id A ;
+    F -> num
+    G -> F
+    E -> G
+    S -> id = E ;
+    BM -> epsilon
+    F -> id
+    G -> F
+    E -> G
+    Relop -> <
+    F -> id
+    G -> F
+    E -> G
+    I -> E Relop E
+    H -> I
+    B -> H
+    BM -> epsilon
+    F -> id
+    G -> F
+    E -> G
+    Relop -> <
+    F -> id
+    G -> F
+    E -> G
+    I -> E Relop E
+    H -> I
+    B -> H
+    BM -> epsilon
+    F -> id
+    G -> F
+    E -> G
+    F -> id
+    G -> F
+    E -> E + G
+    S -> id = E ;
+    N -> epsilon
+    BM -> epsilon
+    F -> id
+    G -> F
+    E -> G
+    F -> id
+    G -> F
+    E -> E + G
+    S -> id = E ;
+    S -> if ( B ) BM S N else BM S
+    S -> while BM ( B ) BM S
+    F -> id
+    G -> F
+    E -> G
+    F -> id
+    G -> F
+    F -> id
+    G -> F
+    E -> G
+    F -> id
+    G -> F
+    E -> E + G
+    F -> ( E )
+    G -> G * F
+    E -> E + G
+    S -> id = E ;
+    F -> id
+    G -> F
+    E -> G
+    Relop -> >
+    F -> id
+    G -> F
+    E -> G
+    I -> E Relop E
+    H -> I
+    B -> H
+    BM -> epsilon
+    F -> id
+    G -> F
+    E -> G
+    S -> id = E ;
+    S -> if ( B ) BM S
+    X -> float
+    DM -> epsilon
+    X -> float
+    M -> X id
+    F -> id
+    G -> F
+    E -> G
+    F -> num
+    G -> F
+    E -> E + G
+    S -> id = E ;
+    F -> id
+    G -> F
+    E -> G
+    S -> return E ;
+    P -> epsilon
+    P -> S P
+    P -> S P
+    D -> proc X id DM ( M ) { P }
+    X -> int
+    C -> epsilon
+    C -> [ num ] C
+    C -> [ num ] C
+    T -> X C
+    A -> epsilon
+    D -> T id A ;
+    X -> int
+    C -> epsilon
+    T -> X C
+    A -> epsilon
+    D -> T id A ;
+    X -> int
+    C -> epsilon
+    T -> X C
+    A -> epsilon
+    D -> T id A ;
+    X -> int
+    C -> epsilon
+    T -> X C
+    A -> epsilon
+    D -> T id A ;
+    X -> int
+    C -> epsilon
+    T -> X C
+    A -> epsilon
+    D -> T id A ;
+    X -> float
+    C -> epsilon
+    T -> X C
+    A -> epsilon
+    D -> T id A ;
+    F -> id
+    G -> F
+    E -> G
+    F -> id
+    G -> F
+    E -> G
+    L -> id [ E ]
+    F -> id
+    G -> F
+    E -> G
+    L -> L [ E ]
+    F -> L
+    G -> F
+    E -> E + G
+    S -> id = E ;
+    F -> id
+    G -> F
+    E -> G
+    L -> id [ E ]
+    F -> id
+    G -> F
+    E -> G
+    L -> L [ E ]
+    F -> id
+    G -> F
+    E -> G
+    S -> L = E ;
+    F -> id
+    G -> F
+    F -> id
+    G -> G * F
+    E -> G
+    S -> id = E ;
+    F -> num
+    G -> F
+    E -> G
+    L -> id [ E ]
+    F -> num
+    G -> F
+    E -> G
+    L -> L [ E ]
+    F -> id
+    G -> F
+    E -> G
+    S -> L = E ;
+    X -> int
+    DM -> epsilon
+    X -> int
+    M -> X id
+    X -> int
+    M -> M , X id
+    F -> id
+    G -> F
+    E -> G
+    F -> num
+    G -> F
+    E -> E + G
+    S -> id = E ;
+    X -> int
+    C -> epsilon
+    T -> X C
+    A -> epsilon
+    D -> T id A ;
+    F -> id
+    G -> F
+    E -> G
+    S -> return E ;
+    P -> epsilon
+    P -> S P
+    P -> D P
+    P -> S P
+    D -> proc X id DM ( M ) { P }
+    P -> epsilon
+    P -> D P
+    P -> S P
+    P -> S P
+    P -> S P
+    P -> S P
+    P -> D P
+    P -> D P
+    P -> D P
+    P -> D P
+    P -> D P
+    P -> D P
+    P -> D P
+    P -> S P
+    P -> S P
+    P -> S P
+    P -> S P
+    P -> D P
+    P -> S P
+    P -> D P
+    P -> D P
+    P -> S P
+    P -> D P
+    P -> S P
+    P -> D P
+    P -> S P
+    P -> S P
+    P -> D P
+    P -> D P
+    P -> S P
+    P -> D P
+\end{textcode}
+\end{multicols}
+其中\texttt{epsilon}表示空串，即$\epsilon$。
+
+经过\texttt{Parser}中的\texttt{reduce}函数，将第\ref{sec:token}节对应的Token序列转化为产生式，其最后一个产生式将其规约到原始文法中的\texttt{P}即开始符号上，证明完成了语法部分的规约。
+\subsection{中间代码}\label{sec:inner_code}
+\begin{multicols}{2}
+    \begin{textcode}
+    t1 = 1 + 2
+    a = t1
+    c = 10
+    t2 = c + 1
+    b = t2
+    t3 = c + c
+    d = t3
+    e = 0
+    y = 999
+    z = 100
+    if a < b goto 12
+    goto 20
+    if c < d goto 14
+    goto 17
+    t4 = y + z
+    x = t4
+    goto 10
+    t5 = a + b
+    x = t5
+    goto 10
+    t6 = d + e
+    t7 = c * t6
+    t8 = b + t7
+    a = t8
+    if a > b goto 26
+    goto 27
+    c = d
+    t9 = i + 1
+    i = t9
+    t10 = i * 12
+    t11 = j * 4
+    t12 = t10 + t11
+    t13 = c + list[t12]
+    d = t13
+    t14 = i * 12
+    t15 = j * 4
+    t16 = t14 + t15
+    list [ t16 ] = c
+    t17 = h * (float) c
+    d = t17
+    t18 = c + 10
+    a = t18
+    \end{textcode}
+\end{multicols}
+在未进行代码优化时，产生的中间代码序列如上所示，其为\texttt{Parser}在\texttt{reduce}函数返回之前的输出。
 \subsection{附加：代码优化}
-\subsection{GUI展示}
+\begin{multicols}{2}
+    \begin{textcode}
+    a = 1 + 2
+    c = 10
+    b = c + 1
+    d = c + c
+    e = 0
+    y = 999
+    z = 100
+    if a < b goto 12
+    goto 20
+    if c < d goto 14
+    goto 17
+    x = y + z
+    goto 10
+    x = a + b
+    goto 10
+    t6 = d + e
+    t7 = c * t6
+    a = b + t7
+    if a > b goto 26
+    goto 27
+    c = d
+    i = i + 1
+    t10 = i * 12
+    t11 = j * 4
+    t12 = t10 + t11
+    d = c + list[t12]
+    t14 = i * 12
+    t15 = j * 4
+    t16 = t14 + t15
+    list [ t16 ] = c
+    d = h * (float) c
+    a = c + 10
+    \end{textcode}
+\end{multicols}
+以上是经过代码优化之后得到的源文件的中间代码，可以看到其相比第\ref{sec:inner_code}节的42行代码，缩减了10行。
+\textbf{具体使用给定代码优化技术有局部无用中间代码删除和强度削弱}。
+
+具体的对比如图\ref{fig:contract}所示。
+\begin{itemize}
+    \item 可以看到在第0行使用到的中间变量$t_1$，仅仅在第0行和第1行出现，且并未在之后使用，所以可以将其简单优化为\texttt{a = 1 + 2}。
+    \item 在未优化的左侧代码，使用了简单的\texttt{$t_3$ = c * 2}，可以将乘法削弱为加法，如右侧\texttt{d = c + c}。
+\end{itemize}
+
+
+\begin{figure}[htb]
+    \centering
+    \includegraphics[width=1\linewidth]{media/contract.png}
+    \caption{中间代码优化前后对比}\label{fig:contract}
+\end{figure}
+
 \appendix
 
-% \section{源代码}
+\section{源代码}
+\begin{itemize}
+    \item \texttt{src/css/}内包含GUI使用的css文件。
+    \item \texttt{src/lexer/}内包含词法分析部分使用到的源码。
+    \item \texttt{src/parser/}内包含了语法和语义分析部分使用到的源码。
+    \item \texttt{src/symbols/}内包含了符号表部分的源码。
+    \item \texttt{Main.java}为GUI形式的Compiler主函数，\texttt{sample.fxml}为\texttt{JavaFX}的配置文件。
+\end{itemize}
+\section{GUI展示}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{media/compiler-source.png}
+    \caption{源码部分}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{media/compiler-lexer.png}
+    \caption{Lexer部分}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{media/compiler-grammar.png}
+    \caption{文法部分}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{media/compiler-lrTable.png}
+    \caption{LR分析表部分}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{media/compiler-parser.png}
+    \caption{Parser部分}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{media/semantic_compiler.png}
+    \caption{语义分析部分}
+\end{figure}
 \section{参考文献}
 \begin{thebibliography}{20}
-    % \bibitem{employee_name} 中国最常见名字前50名, \texttt{https://www.sohu.com/a/164406113\_367620}
     \bibitem{dragon-book} Aho A V, Sethi R, Ullman J D. Compilers, principles, techniques[J]. Addison wesley, 1986, 7(8): 9.
 \end{thebibliography}
 

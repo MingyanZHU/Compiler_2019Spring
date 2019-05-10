@@ -1,15 +1,20 @@
 \contentsline {section}{\numberline {第1章}需求分析}{3}{section.1}
-\contentsline {section}{\numberline {第2章}文法设计}{3}{section.2}
-\contentsline {section}{\numberline {第3章}系统设计}{5}{section.3}
-\contentsline {subsection}{\numberline {3.1}编译器框架}{5}{subsection.3.1}
-\contentsline {subsection}{\numberline {3.2}核心数据结构}{6}{subsection.3.2}
-\contentsline {subsection}{\numberline {3.3}主要函数功能}{7}{subsection.3.3}
-\contentsline {subsection}{\numberline {3.4}核心流程图}{7}{subsection.3.4}
-\contentsline {section}{\numberline {第4章}系统实现}{7}{section.4}
-\contentsline {subsection}{\numberline {4.1}源文件}{7}{subsection.4.1}
-\contentsline {subsection}{\numberline {4.2}语法分析表}{7}{subsection.4.2}
-\contentsline {subsection}{\numberline {4.3}产生式序列}{7}{subsection.4.3}
-\contentsline {subsection}{\numberline {4.4}中间代码}{7}{subsection.4.4}
-\contentsline {subsection}{\numberline {4.5}附加：代码优化}{7}{subsection.4.5}
-\contentsline {subsection}{\numberline {4.6}GUI展示}{7}{subsection.4.6}
-\contentsline {section}{\numberline {A}参考文献}{7}{appendix.A}
+\contentsline {section}{\numberline {第2章}关键字定义与文法设计}{3}{section.2}
+\contentsline {subsection}{\numberline {2.1}关键字定义}{3}{subsection.2.1}
+\contentsline {subsection}{\numberline {2.2}文法设计}{4}{subsection.2.2}
+\contentsline {section}{\numberline {第3章}系统设计}{6}{section.3}
+\contentsline {subsection}{\numberline {3.1}编译器框架}{6}{subsection.3.1}
+\contentsline {subsection}{\numberline {3.2}核心数据结构}{7}{subsection.3.2}
+\contentsline {subsection}{\numberline {3.3}主要函数功能}{8}{subsection.3.3}
+\contentsline {subsubsection}{\numberline {3.3.1}\texttt {Lexer}主要函数功能}{8}{subsubsection.3.3.1}
+\contentsline {subsubsection}{\numberline {3.3.2}\texttt {Parser}主要函数功能}{8}{subsubsection.3.3.2}
+\contentsline {section}{\numberline {第4章}系统实现}{8}{section.4}
+\contentsline {subsection}{\numberline {4.1}源文件}{8}{subsection.4.1}
+\contentsline {subsection}{\numberline {4.2}语法分析表}{10}{subsection.4.2}
+\contentsline {subsection}{\numberline {4.3}Token序列}{10}{subsection.4.3}
+\contentsline {subsection}{\numberline {4.4}产生式序列}{11}{subsection.4.4}
+\contentsline {subsection}{\numberline {4.5}中间代码}{14}{subsection.4.5}
+\contentsline {subsection}{\numberline {4.6}附加：代码优化}{15}{subsection.4.6}
+\contentsline {section}{\numberline {A}源代码}{16}{appendix.A}
+\contentsline {section}{\numberline {B}GUI展示}{17}{appendix.B}
+\contentsline {section}{\numberline {C}参考文献}{22}{appendix.C}
